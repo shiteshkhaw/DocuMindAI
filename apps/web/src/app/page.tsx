@@ -44,6 +44,8 @@ import {
   Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import logoImg from "../../public/logo.png";
 
 import { 
   Button, 
@@ -404,7 +406,7 @@ export default function DashboardPage() {
           <DropdownTrigger>
             <button className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-secondary/60 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-none">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-sm shadow-primary/10 border border-border/50 bg-background">
-                <img src="/logo.png" alt="DocuMind AI Logo" className="h-full w-full object-cover" />
+                <Image src={logoImg} alt="DocuMind AI Logo" className="h-full w-full object-cover" priority />
               </div>
               <div className="flex items-center gap-1">
                 <div>

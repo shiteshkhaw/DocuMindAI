@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Brain, Shield, Lock, Layers } from "lucide-react";
+import Image from "next/image";
+import logoImg from "../../../public/logo.png";
 
 // Particle System Background
 const ParticleSystem = () => {
@@ -205,7 +207,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="flex h-16 w-16 items-center justify-center rounded-2xl bg-transparent overflow-hidden shadow-lg shadow-primary/10 mb-8 border border-border/50"
             >
-              <img src="/logo.png" alt="DocuMind AI Logo" className="h-full w-full object-cover" />
+              <Image src={logoImg} alt="DocuMind AI Logo" className="h-full w-full object-cover" priority />
             </motion.div>
             
             <h1 className="text-4xl xl:text-5xl font-bold text-foreground tracking-tight leading-tight mb-4">
