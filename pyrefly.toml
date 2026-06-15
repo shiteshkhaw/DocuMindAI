@@ -1,0 +1,23 @@
+# Pyrefly configuration for DocuMind AI monorepo
+# See: https://pyrefly.org/en/docs/configuration/
+
+# Tell Pyrefly to type-check the API source tree
+project-includes = ["apps/api/**/*.py"]
+
+# Exclude generated/cache/node_modules directories
+project-excludes = [
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/venv/**",
+    "**/.venv/**",
+    "**/dist/**",
+    "**/.turbo/**",
+]
+
+# Add apps/api as a source root so `import models.document` etc. resolve correctly
+search-path = ["apps/api"]
+
+# Use basic preset — only high-confidence errors (syntax, missing imports, etc.)
+[errors]
+# Suppress errors we don't control (e.g. SQLAlchemy datetime.utcnow deprecation stubs)
+bad-argument = false

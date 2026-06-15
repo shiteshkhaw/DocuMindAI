@@ -1,0 +1,10 @@
+{
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "include": ["."],
+  "exclude": ["__pycache__"],
+  "extraPaths": ["."],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false
+}

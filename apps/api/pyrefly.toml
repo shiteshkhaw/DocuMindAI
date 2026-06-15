@@ -1,0 +1,19 @@
+# Pyrefly configuration for the DocuMind AI Python API
+# See: https://pyrefly.org/en/docs/configuration/
+
+# Type-check all Python files under apps/api
+project-includes = ["**/*.py"]
+
+# Exclude cache, scratch, and virtual environment directories
+project-excludes = [
+    "**/__pycache__/**",
+    "**/venv/**",
+    "**/.venv/**",
+]
+
+# apps/api is already the project root, so "." makes all local packages resolvable:
+# models.document, orchestration.service, retrieval.service, etc.
+search-path = ["."]
+
+# Python version
+python-version = "3.13"

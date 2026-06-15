@@ -1,0 +1,10 @@
+{
+  "name": "api-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload",
+    "build": "echo \"No build step for Python API\"",
+    "test": "python -m pytest"
+  }
+}
