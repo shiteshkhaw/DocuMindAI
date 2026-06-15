@@ -403,8 +403,8 @@ export default function DashboardPage() {
         <Dropdown>
           <DropdownTrigger>
             <button className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-secondary/60 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-none">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-sm shadow-primary/20">
-                <Brain className="h-4.5 w-4.5" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-sm shadow-primary/10 border border-border/50 bg-background">
+                <img src="/logo.png" alt="DocuMind AI Logo" className="h-full w-full object-cover" />
               </div>
               <div className="flex items-center gap-1">
                 <div>

@@ -203,9 +203,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <motion.div 
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 mb-8 border border-primary-foreground/10"
+              className="flex h-16 w-16 items-center justify-center rounded-2xl bg-transparent overflow-hidden shadow-lg shadow-primary/10 mb-8 border border-border/50"
             >
-              <Brain className="h-8 w-8" />
+              <img src="/logo.png" alt="DocuMind AI Logo" className="h-full w-full object-cover" />
             </motion.div>
             
             <h1 className="text-4xl xl:text-5xl font-bold text-foreground tracking-tight leading-tight mb-4">

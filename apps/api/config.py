@@ -17,7 +17,7 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://neondb_owner:password@c-2.ap-southeast-1.aws.neon.tech/neondb",
         description="Asyncpg database connection string"
     )
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]
+    CORS_ORIGINS: Any = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -26,12 +26,17 @@ class Settings(BaseSettings):
             v = v.strip()
             if not v:
                 return []
-            if v.startswith("[") and v.endswith("]"):
+            if (v.startswith("[") and v.endswith("]")) or (v.startswith("{") and v.endswith("}")):
                 try:
-                    return json.loads(v)
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return parsed
                 except Exception:
                     pass
-            return [x.strip() for x in v.split(",") if x.strip()]
+            # Robust split by comma for plain URLs or single/double quoted items
+            return [x.strip().strip("'").strip('"') for x in v.split(",") if x.strip()]
+        elif isinstance(v, list):
+            return [str(x) for x in v]
         return v
 
     MAX_FILE_SIZE_MB: int = 10
