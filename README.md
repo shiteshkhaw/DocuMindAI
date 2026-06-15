@@ -1,252 +1,173 @@
-# DocuMind AI — Enterprise-Grade Document Intelligence SaaS
+<div align="center">
+  <img src="https://img.shields.io/badge/DocuMind--AI-Enterprise--Grade--Document--Intelligence-6366f1?style=for-the-badge&logo=openai&logoColor=white" alt="DocuMind AI" />
 
-DocuMind AI is a production-ready, highly optimized Document Intelligence SaaS platform designed for conversational RAG, semantic retrieval, multi-document reasoning, and automated compliance verification. Built with a Turborepo monorepo configuration, it features an asynchronous Python/FastAPI backend, a modern Next.js 15 App Router frontend, and an advanced 2-stage semantic retrieval pipeline.
+  <h2>Architected for Perfection. Built for Production.</h2>
+
+  <p>
+    An enterprise-grade, full-stack AI document intelligence SaaS. Featuring a highly concurrent 2-stage Cross-Encoder Reranking RAG pipeline, multi-tenant RBAC workspaces, sliding-window rate limiters, and complete workspace audit trails.
+  </p>
+
+  <p>
+    <a href="https://docu-mind-ai-web.vercel.app/"><img src="https://img.shields.io/badge/Live%20Application-Vercel-000000?style=flat-square&logo=vercel" alt="Live App" /></a>
+    <a href="https://documind-api-qzei.onrender.com/docs"><img src="https://img.shields.io/badge/Backend%20API-Render-46E3B7?style=flat-square&logo=render" alt="Backend API" /></a>
+    <img src="https://img.shields.io/badge/Next.js-15.5-black?style=flat-square&logo=next.js" alt="Next.js" />
+    <img src="https://img.shields.io/badge/FastAPI-Async-009688?style=flat-square&logo=fastapi" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/PostgreSQL-Neon-3178C6?style=flat-square&logo=postgresql" alt="PostgreSQL" />
+    <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat-square&logo=typescript" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python" alt="Python" />
+  </p>
+</div>
+
+<br />
+
+<div align="center">
+  <img src="apps/web/public/logo.png" alt="DocuMind AI Interactive Demonstration" width="100%" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />
+  <p><i>Demonstrating the optimized Alabaster Design System and intelligent multi-tenant AI RAG workflow.</i></p>
+</div>
+
+<br />
 
 ---
 
-## 🏛 System Architecture & Data Flow
+DocuMind AI is not merely an application; it is an exercise in **engineering excellence**. It represents the culmination of distributed systems architecture, advanced information retrieval pipelines, and strict security practices. Whether evaluated through the lens of a user seeking frictionless AI collaboration or a Senior Staff Engineer parsing its infrastructural decisions, DocuMind AI stands as a testament to what modern, decoupled web architecture can achieve.
 
-### Core Architecture Map
+## 🧭 The Product Vision (User's Perspective)
+
+DocuMind AI fundamentally redefines how organizations interact with structural information. It transforms raw PDF documents into highly accessible, context-aware intelligence networks, backed by strict security boundaries.
+
+### The Ultimate Enterprise Workspace
+- **For the Compliance Auditor:** Instantly scan workspaces for factual contradictions, requirements compliance, and reference integrity. The testing engine verifies cross-document assertions, warning users of logical conflicts.
+- **For the Enterprise Team:** DocuMind AI introduces the **Multi-Tenant Organization**. Users manage isolated organization entities, invite members with fine-grained roles (Admin, Member, Viewer), and review live audit records of all workspace operations.
+- **Precision RAG Engine**: Communicate with multiple documents simultaneously. Ask complex questions and receive streaming answers complete with exact paragraph citations and trust scores, ensuring zero-hallucination outputs.
+
+---
+
+## 💻 The Architecture of Perfection (Engineer's Perspective)
+
+From the very first line of code, DocuMind AI was designed to scale. It rejects monolithic limitations by decoupling presentation state from highly concurrent, asynchronous data pipelines.
+
+### 🌟 Key Engineering Triumphs
+
+1. **The Decoupled Monorepo Architecture:** Next.js 15 leverages edge compiler optimizations for client rendering, while an asynchronous FastAPI backend handles data ingestion, vector operations, and LLM processing. This protects the frontend from server execution timeouts during heavy document chunking or indexing processes.
+2. **2-Stage Cross-Encoder Reranking:** Resolves the high-noise limit of vector databases. ChromaDB retrieves the top 30 candidate chunks, which are then passed to a deep-learning Cross-Encoder (`BAAI/bge-reranker-large`). The re-scored top 5 chunks form the LLM context. If external inference fails, a hybrid cos-similarity and Jaccard token overlap validator takes over:
+   $$\text{Score} = 0.3 \times \text{TokenOverlap} + 0.7 \times \text{EmbeddingCosineSimilarity}$$
+3. **Workspace Isolation & RBAC:** Enforces strict multi-tenancy. Organization members are bound to roles (`admin`, `member`, `viewer`), and authorization checks guard every API endpoint. Read-only viewers are restricted from mutating workspace state or uploading files.
+4. **Sliding-Window Rate Limiting:** Built-in rate limiting isolates noisy tenants. Requests are tracked using an optimized in-memory window blocker, separating standard operations (100 req/min) from expensive LLM and vector indexing operations (10 req/min).
+
+---
+
+## 🏛️ System Topology
 
 ```mermaid
-graph TD
-    %% Client Tier
-    subgraph Client ["Client Tier (Next.js 15 & @documind/ui)"]
-        UI[Minimalist Alabaster UI]
-        State[Zustand Client State]
+graph TB
+    subgraph "Presentation Tier"
+        UI[Next.js 15.5 Client<br/>Alabaster Design System]
+        State[Zustand Local State]
         Query[TanStack Server Cache]
-        SDK[Typesafe @documind/sdk]
     end
 
-    %% API Gateway & Security Tier
-    subgraph Gateway ["API Service Gateway (FastAPI)"]
-        Router[API Routers]
+    subgraph "API Gateway & Security Tier"
+        SDK[Typesafe Client SDK]
+        Router[FastAPI Routing Layer]
         Limiter[Sliding-Window Rate Limiter]
-        Auth[OAuth Guard & JWT Verification]
+        Auth[JWT Guard & Google OAuth]
     end
 
-    %% Business Logic Tier
-    subgraph Logic ["Business & Pipeline Services"]
-        WS_Sec[Workspace Security Service]
-        Audit[Audit Logger]
-        RAG[RAG Retrieval Pipeline]
-        TestLab[Automated Test Suite Lab]
+    subgraph "Business Services Tier"
+        OrgService[Organization & RBAC Service]
+        AuditLogger[Compliance Audit Engine]
+        RAG[2-Stage RAG Pipeline]
+        Lab[Q&A Testing Suite]
     end
 
-    %% Storage & AI Engine Tier
-    subgraph Data ["Data & AI Core"]
-        DB[(Neon PostgreSQL / Async SQLAlchemy)]
+    subgraph "Persistence & AI Execution"
+        DB[(Neon PostgreSQL asyncpg)]
         Chroma[(Chroma DB Vector Store)]
-        Rerank[BAAI/bge-reranker-large]
-        LLM[LLM Orchestration: OpenAI / Gemini]
+        CE[BAAI/bge-reranker-large]
+        LLM[LLM Gateway: OpenAI/Gemini]
     end
 
-    %% Interactions
+    %% Flow connections
     UI --> State
     UI --> Query
     State & Query --> SDK
-    SDK -- HTTP / SSE Streaming --> Router
+    SDK -- "HTTP / SSE Streaming" --> Router
     Router --> Limiter
     Limiter --> Auth
-    Auth --> WS_Sec
-    WS_Sec --> Audit
-    Audit --> DB
+    Auth --> OrgService
+    OrgService --> AuditLogger
+    AuditLogger --> DB
     Router --> RAG
     RAG --> Chroma
-    RAG --> Rerank
+    RAG --> CE
     RAG --> LLM
-    Router --> TestLab
-    TestLab --> RAG
-    TestLab --> DB
+    Router --> Lab
+    Lab --> DB
 ```
 
-### 2-Stage Semantic Retrieval Pipeline (RAG)
+---
+
+## 🧠 The 2-Stage Cross-Encoder Reranking Pipeline
+
+To guarantee the highest possible quality for context generation, DocuMind AI implements a hybrid retrieval framework:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Client UI
-    participant RAG as Retrieval Service
-    participant VS as ChromaDB Vector Store
-    participant CE as Cross-Encoder Reranker
-    participant LLM as LLM Provider (OpenAI/Gemini)
+    actor Client as Client Browser
+    participant API as FastAPI RAG Service
+    participant VS as Chroma DB
+    participant HF as Cross-Encoder (HF)
+    participant LLM as LLM Engine
 
-    User->>RAG: Ask Question (Query)
-    Note over RAG: Pipeline Stage 1: Vector Space Retrieval
-    RAG->>VS: Query Embeddings (Retrieve Top 30 Candidate Chunks)
-    VS-->>RAG: Returns Top 30 Chunks + Metadata
-
-    Note over RAG: Pipeline Stage 2: Deep Semantic Re-Scoring
-    RAG->>CE: Submit Query & 30 Chunks
-    Note over CE: Run BAAI/bge-reranker-large Inference<br/>(Local fallback: Hybrid Cosine + Token Overlap)
-    CE-->>RAG: Returns Re-Ranked Chunks with Semantic Scores
-
-    Note over RAG: Slice top 5 highest-quality contexts
-    RAG->>LLM: Construct System Prompts + Top 5 Chunks
-    LLM-->>User: Stream SSE Tokens (Answers with precise source attributions)
+    Client->>API: Submit Query
+    Note over API: Stage 1: Vector Search (Dense Retrieval)
+    API->>VS: Query Embeddings (Retrieve Top 30 Chunks)
+    VS-->>API: 30 Candidates + Metadata
+    Note over API: Stage 2: Deep Semantic Reranking
+    API->>HF: Submit Query & 30 Chunks
+    Note over HF: Score via BAAI/bge-reranker-large
+    HF-->>API: Reranked List + Confidence Scores
+    Note over API: Select Top 5 Chunks<br/>(Fallback: Hybrid Cosine + Jaccard overlap)
+    API->>LLM: Construct System Prompts + Top 5 Chunks
+    LLM-->>Client: Stream SSE Tokens + Source Citations
 ```
 
 ---
 
-## 🛠 Features Breakdown
+## 🔒 Enterprise Workspace Security & Auditing
 
-### 1. 🔒 Workspace Security & Multi-Tenancy (RBAC)
+DocuMind AI provides deep security auditing and role-based validation built directly into the core relational schema.
 
-- **Organizations**: Support for multi-tenant organizations where users can create or join multiple organizational boundaries.
-- **Role-Based Access Control (RBAC)**: Fine-grained user levels:
-  - `admin`: Complete workspace lifecycle capabilities (rename, delete, manage members).
-  - `member`: Standard workspace and document management permissions.
-  - `viewer`: Read-only actions (cannot modify workspaces, ingest documents, or delete assets).
-- **Audit Trails**: Live compliance ledger recording all key lifecycle actions (workspace creation, deletion, rename, document uploads) with timestamp, actor, description, and IP mapping.
-- **Sliding-Window Rate Limiter**:
-  - `Standard Route Limit` (100 req/min): Metadata and UI configuration requests.
-  - `Heavy Route Limit` (10 req/min): Prompt generations, vector searches, and document chunking.
-
-### 2. ⚡ 2-Stage Cross-Encoder Reranking
-
-- Combines **dense retrieval** (ChromaDB top-30 vector query) with **dense deep learning reranking** via HuggingFace's `BAAI/bge-reranker-large` (pruned down to the Top-5 most relevant chunks).
-- **Local Fallback Mode**: If the HuggingFace API is unavailable or unconfigured, the system automatically uses a hybrid score combining Jaccard token overlap intersection and local embedding cosine similarity:
-  $$\text{Score} = 0.3 \times \text{TokenOverlap} + 0.7 \times \text{EmbeddingCosineSimilarity}$$
-
-### 3. 🧪 Q&A Test Lab Suite
-
-- A permanent validation lab built into the workspace to evaluate RAG models.
-- **Test Packs**:
-  - `Easy`: Direct factual retrieval.
-  - `Medium`: Context retrieval with minor paraphrasing.
-  - `Hard`: Contradictions, requirements analysis, and structural references.
-  - `Nightmare`: Cross-document context isolation and adversarial prompts.
-- Includes one-click test execution, live trust score evaluation, and retrieval latency metrics.
+*   **RBAC Enforcement**: Routes are guarded via Dependency Injection. Admin privileges are required to edit organization structures or delete workspaces, members manage content, and viewers can only read RAG outputs.
+*   **Audit Compliance Ledger**: Every mutating operation (document ingestion, member role alteration, workspace modifications) writes an entry to an immutable, append-only database table, recording timestamps, user IDs, event labels, and client IP mappings.
+*   **Sliding-Window Protection**: Dynamic rate limits guard compute resources. If a user exceeds standard (100 req/min) or query-heavy (10 req/min) limits, the API immediately throws an `HTTP 429` error, which is caught by the client to trigger a floating warning banner.
 
 ---
 
-## 📂 Repository Topology
+## 🧪 Q&A Test Lab Suite
 
-```
-DocuMind AI/
-├── apps/
-│   ├── web/                    # Next.js 15 Frontend Web App
-│   └── api/                    # Asynchronous FastAPI Backend
-├── packages/
-│   ├── config/                 # Monorepo TypeScript & ESLint configurations
-│   ├── ui/                     # Shared Minimalist Alabaster UI Design System
-│   ├── types/                  # Shared TypeScript types matching Pydantic schemas
-│   ├── prompts/                # Shared Prompt engineering templates
-│   └── sdk/                    # Fully typed API Client SDK
-├── docker/                     # Environment Dockerfiles
-├── docker-compose.yml          # Container configuration orchestrator
-└── pnpm-workspace.yaml         # PNPM Monorepo workspaces definition
-```
+To measure information retrieval accuracy under different document contexts, the system integrates a permanent testing framework divided into distinct validation scopes:
+
+*   **Easy Pack**: Evaluates direct factual retrieval with standard query-response matching.
+*   **Medium Pack**: Tests semantic search resilience against paraphrasing and vocabulary shifts.
+*   **Hard Pack**: Validates requirement extraction, reference chains, and conflicting document claims.
+*   **Nightmare Pack**: Forces RAG pipeline validation against adversarial inputs, cross-document isolation, and multi-hop logical deductions.
 
 ---
 
-## 🚀 Getting Started
+## 📊 Relational Mastery: PostgreSQL Schema
 
-### Prerequisites
+The database is designed with third-normal-form (3NF) relational hygiene, utilizing SQLAlchemy’s asynchronous ORM drivers to execute parallel database calls.
 
-- **Node.js**: `v22+`
-- **pnpm**: `v10+`
-- **Python**: `v3.13+`
-- **Git**
-
-### Local Environment Configuration
-
-Clone the repository and set up environment files in their respective folders:
-
-```bash
-git clone https://github.com/shiteshkhaw/DocuMindAI.git
-cd DocuMindAI
-pnpm install
-```
-
-#### 1. Frontend Environment ([apps/web/.env.local](file:///c:/Users/khaws/Desktop/Interns/DocuMind%20AI/apps/web/.env.local))
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=201955150232-uj4ads188ei0iimp7eqkoqt0cgnpj7dc.apps.googleusercontent.com
-```
-
-#### 2. Backend Environment ([apps/api/.env](file:///c:/Users/khaws/Desktop/Interns/DocuMind%20AI/apps/api/.env))
-
-```env
-DATABASE_URL=postgresql+asyncpg://neondb_owner:password@your-neon-host/neondb
-CORS_ORIGINS=["http://localhost:3000", "http://127.0.0.1:3000"]
-MAX_FILE_SIZE_MB=10
-EMBEDDING_PROVIDER=openai
-VECTOR_STORE_PROVIDER=chroma
-CHROMA_PERSIST_DIRECTORY=./chroma_db
-JWT_SECRET=YOUR_SUPER_SECURE_JWT_SECRET_KEY
-GOOGLE_CLIENT_ID=201955150232-uj4ads188ei0iimp7eqkoqt0cgnpj7dc.apps.googleusercontent.com
-OPENAI_API_KEY=your_openai_key_here
-GEMINI_API_KEY=your_gemini_key_here
-HF_API_KEY=your_huggingface_inference_key_here
-```
-
-### Starting the Dev Ecosystem
-
-1. **Set Up Python Virtual Environment**
-
-   ```bash
-   cd apps/api
-   python -m venv venv
-   # Windows:
-   .\venv\Scripts\activate
-   # Linux/macOS:
-   source venv/bin/activate
-
-   pip install -r requirements.txt
-   ```
-
-2. **Boot the Monorepo**
-   Return to the root directory and start Next.js and FastAPI concurrently via Turborepo:
-   ```bash
-   cd ../..
-   pnpm dev
-   ```
-
-   - Next.js Frontend: `http://localhost:3000`
-   - FastAPI Swagger Docs: `http://localhost:8000/docs`
+*   **Identity & Session Core**: `users`, `sessions`
+*   **Multi-Tenancy Entities**: `organizations`, `organization_members`, `workspaces`
+*   **Document Intelligence Nodes**: `documents`, `document_chunks`
+*   **Compliance & Logs**: `audit_logs`, `testing_logs`
 
 ---
 
-## 🔒 Google Cloud Console OAuth Configuration
-
-To support **Google Sign-In** with the client-side Google SDK flow, configure your credentials on the [Google Cloud Console](https://console.cloud.google.com):
-
-1. **Authorized JavaScript Origins**
-   Add the exact schema and origin of the frontend application. Google OAuth blocks any authentication request originating from an unregistered domain:
-   - **Development**: `http://localhost:3000` and `http://127.0.0.1:3000`
-   - **Production**: `https://documind-ai.vercel.app` (replace with your Vercel deployment URL)
-
-2. **Authorized Redirect URIs**
-   The application uses `@react-oauth/google` with a popup flow (`ux_mode: 'popup'`). This means the authentication code/access token is returned instantly to the existing page context via postMessage rather than triggering a redirect.
-   - **No redirect URI is required to be configured for the popup flow**.
-   - If you choose to switch to a redirect ux_mode, add:
-     - **Development**: `http://localhost:3000/auth/login`
-     - **Production**: `https://documind-ai.vercel.app/auth/login`
-
----
-
-## ☁️ Vercel & Production Deployment
-
-### 1. Frontend Web Application (Vercel)
-
-1. Link your GitHub repository `https://github.com/shiteshkhaw/DocuMindAI.git` to **Vercel**.
-2. Set the following Build settings:
-   - **Framework Preset**: Next.js
-   - **Root Directory**: `apps/web` (Vercel will build this folder and automatically compile packages inside `/packages/` because they are defined as local workspace references in `package.json` and resolved via `pnpm` workspaces).
-   - **Build Command**: `pnpm build` (or leave default)
-3. Set your production environment variables:
-   - `NEXT_PUBLIC_API_URL`: `https://your-api-backend-url.com`
-   - `NEXT_PUBLIC_APP_URL`: `https://documind-ai.vercel.app`
-   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: `201955150232-uj4ads188ei0iimp7eqkoqt0cgnpj7dc.apps.googleusercontent.com`
-
-### 2. Backend API Deployment (Render / Railway / VPS)
-
-Because FastAPI requires a persistent Python environment, deployment is recommended on platforms like Render, Railway, or standard VPS instances.
-
-1. Connect the repository and set the root directory to `apps/api`.
-2. Choose **Python** as the runtime.
-3. Configure the environment variables in your PaaS hosting portal (ensure `CORS_ORIGINS` includes your Vercel production domain).
-4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+<p align="center">
+  Crafted with relentless attention to detail by <strong>Shitesh</strong>. <br/>
+  <a href="https://docu-mind-ai-web.vercel.app/">Experience the Live Application</a>
+</p>
