@@ -53,7 +53,7 @@ class ReviewCopilotService:
         findings_context = {
             "document_name": doc_name,
             "facts_count": len(facts),
-            "semantic_conflicts": [f["summary"] for f in semantic_conflicts[:8]],
+            "semantic_conflicts": [f.get("summary") or f.get("explanation") or "" for f in semantic_conflicts[:8]],
             "broken_references": [f"{f['reference']} -> {f['target']} (Page {f['page']})" for f in references if f["status"] == "BROKEN_REFERENCE"][:8],
             "requirements": [{"id": r["requirement_id"], "status": r["status"]} for r in requirements[:8]],
             "entity_conflicts": [f"{c['entity']}: '{c['value_a']}' vs '{c['value_b']}'" for c in entity_conflicts[:8]],

@@ -46,7 +46,7 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await sdk.googleLogin(token);
-      const user = await sdk.getMe();
+      const user = res.user || await sdk.getMe();
       setAuth(user, res.access_token);
       router.push("/");
     } catch (err: any) {
@@ -63,7 +63,7 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await sdk.login(email, password);
-      const user = await sdk.getMe();
+      const user = res.user || await sdk.getMe();
       setAuth(user, res.access_token);
       router.push("/");
     } catch (err: any) {

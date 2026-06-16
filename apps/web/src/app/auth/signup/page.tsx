@@ -46,7 +46,7 @@ export default function SignupPage() {
     setError(null);
     try {
       const res = await sdk.googleLogin(token);
-      const user = await sdk.getMe();
+      const user = res.user || await sdk.getMe();
       setAuth(user, res.access_token);
       router.push("/");
     } catch (err: any) {
@@ -62,10 +62,14 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     try {
-      await sdk.signup(name, email, password);
-      const res = await sdk.login(email, password);
-      const user = await sdk.getMe();
-      setAuth(user, res.access_token);
+      const res = await sdk.signup(name, email, password);
+      if (res.access_token) {
+        setAuth(res, res.access_token);
+      } else {
+        const loginRes = await sdk.login(email, password);
+        const user = loginRes.user || await sdk.getMe();
+        setAuth(user, loginRes.access_token);
+      }
       router.push("/");
     } catch (err: any) {
       setError(err.message || "Failed to create account");

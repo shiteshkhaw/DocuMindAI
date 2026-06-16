@@ -15,13 +15,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def signup(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
-    user = await service.signup(user_in)
+    user = await service.signup(user_in, generate_token=True)
     return UserResponse(
         id=user.id,
         name=user.name,
         email=user.email,
         created_at=user.created_at,
-        updated_at=user.updated_at
+        updated_at=user.updated_at,
+        access_token=getattr(user, "access_token", None),
+        refresh_token=getattr(user, "refresh_token", None),
+        token_type=getattr(user, "token_type", None),
+        expires_in=getattr(user, "expires_in", None)
     )
 
 @router.post("/login", response_model=TokenResponse)

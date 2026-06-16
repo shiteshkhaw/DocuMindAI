@@ -75,10 +75,14 @@ export class DocuMindSDK {
   }
 
   async signup(name: string, email: string, password: string): Promise<User> {
-    return this.request<User>("/api/v1/auth/signup", {
+    const res = await this.request<User>("/api/v1/auth/signup", {
       method: "POST",
       body: JSON.stringify({ name, email, password }),
     });
+    if (res.access_token) {
+      this.setToken(res.access_token);
+    }
+    return res;
   }
 
   async getMe(): Promise<User> {

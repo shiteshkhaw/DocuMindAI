@@ -1,0 +1,731 @@
+{
+  "Signup A Request": {
+    "url": "http://127.0.0.1:8000/api/v1/auth/signup",
+    "payload": {
+      "name": "User A",
+      "email": "usera_8656@example.com"
+    }
+  },
+  "Signup A Response": {
+    "id": "usr-5a6f2385-504b-48cb-b219-1b6529bc9ae8",
+    "name": "User A",
+    "email": "usera_8656@example.com",
+    "created_at": "2026-06-16T14:21:32.026453",
+    "updated_at": "2026-06-16T14:21:32.026453",
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3ItNWE2ZjIzODUtNTA0Yi00OGNiLWIyMTktMWI2NTI5YmM5YWU4IiwiZXhwIjoxNzgxNzA2MDkyLCJqdGkiOiI5YmZkODAyZi01NmZlLTQ4MzgtYjkwYy1jODdkYzVkMjJjMWUifQ.knQBQnEdCHrNk5cJTxT6M4kFUSuN_hSNN6_vPhORTGY",
+    "refresh_token": "rf-1f6659b8-a43a-4eeb-a440-aed0d6b51632",
+    "token_type": "bearer",
+    "expires_in": 86400
+  },
+  "Login A Request": {
+    "url": "http://127.0.0.1:8000/api/v1/auth/login",
+    "payload": {
+      "email": "usera_8656@example.com"
+    }
+  },
+  "Login A Response": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3ItNWE2ZjIzODUtNTA0Yi00OGNiLWIyMTktMWI2NTI5YmM5YWU4IiwiZXhwIjoxNzgxNzA2MDk4LCJqdGkiOiIwMzQ0OTM5Yi1hM2U0LTRkOGMtOGM5NS1lOWMyMmI3YjIxYWEifQ.eEHgvFt0JDI483kx2uCFcfVSRXkkTJXVwWrOVF8wwgw",
+    "refresh_token": "rf-ca4cf641-1d60-4cdc-8742-a2d13c15a882",
+    "token_type": "bearer",
+    "expires_in": 86400,
+    "user": {
+      "id": "usr-5a6f2385-504b-48cb-b219-1b6529bc9ae8",
+      "name": "User A",
+      "email": "usera_8656@example.com",
+      "created_at": "2026-06-16T14:21:32.026453",
+      "updated_at": "2026-06-16T14:21:38.427986",
+      "access_token": null,
+      "refresh_token": null,
+      "token_type": null,
+      "expires_in": null
+    }
+  },
+  "Create Workspace A Request": {
+    "url": "http://127.0.0.1:8000/api/v1/workspaces",
+    "payload": {
+      "name": "Workspace A"
+    }
+  },
+  "Create Workspace A Response": {
+    "id": "ws-6eb061d4-540a-47ec-91e5-76ce34bfc440",
+    "name": "Workspace A",
+    "description": null,
+    "created_at": "2026-06-16T14:21:43.676654",
+    "organization_id": null
+  },
+  "User A List Workspaces Response": [
+    {
+      "id": "ws-0f8efe6d-202f-4ce1-9cbd-649419d36ec5",
+      "name": "Personal Workspace",
+      "description": "Your default workspace",
+      "created_at": "2026-06-16T14:21:32.026453",
+      "organization_id": null
+    },
+    {
+      "id": "ws-6eb061d4-540a-47ec-91e5-76ce34bfc440",
+      "name": "Workspace A",
+      "description": null,
+      "created_at": "2026-06-16T14:21:43.676654",
+      "organization_id": null
+    }
+  ],
+  "User A Hack Workspace B Response": 404,
+  "Document Upload Request": {
+    "url": "http://127.0.0.1:8000/api/v1/documents/upload",
+    "filename": "audit_contradictions.pdf"
+  },
+  "Document Upload Response": {
+    "name": "audit_contradictions.pdf",
+    "id": "doc-ea1f0362-159e-4c21-82f6-b9acbcf942db",
+    "storageUrl": "s3://documind-vault/doc-ea1f0362-159e-4c21-82f6-b9acbcf942db_audit_contradictions.pdf",
+    "status": "queued",
+    "metadata": {
+      "title": "audit_contradictions",
+      "author": null,
+      "pageCount": null,
+      "fileSize": 3094,
+      "mimeType": "application/pdf",
+      "checksum": "6aac46822f7d3214509c761a48dce02d43b02ab69c72b95fd691a9044b076b49"
+    },
+    "createdAt": "2026-06-16T14:22:00.107796",
+    "updatedAt": "2026-06-16T14:22:00.107800",
+    "userId": "usr-5a6f2385-504b-48cb-b219-1b6529bc9ae8",
+    "progress_percentage": 0,
+    "error": null
+  },
+  "Leak Doc Response Code": 404,
+  "Leak Analysis Response Code": 404,
+  "Analysis Response": {
+    "documentId": "doc-ea1f0362-159e-4c21-82f6-b9acbcf942db",
+    "summary": {
+      "abstract": "The document outlines the verification audit for the DocuMind project, detailing discrepancies in project start dates, budgets, and encryption requirements.",
+      "keyPoints": [
+        "Discrepancies in project start dates and budgets.",
+        "Conflicting requirements regarding data encryption."
+      ],
+      "suggestedQuestions": [
+        "What are the implications of the contractor change?",
+        "How will the budget discrepancies affect project timelines?"
+      ]
+    },
+    "entities": [
+      {
+        "id": "ent-e8061121-100e-4a5d-ae35-f663ef081833",
+        "type": "PRODUCT",
+        "text": "DocuMind Verification Audit",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 1,
+            "snippet": "Document for DocuMind Verification Audit - Page 1"
+          },
+          {
+            "page": 2,
+            "snippet": "Document for DocuMind Verification Audit - Page 2"
+          }
+        ],
+        "frequency": 2,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-d7e58c1f-b69b-4fdd-a065-1c13146638e7",
+        "type": "ORGANIZATION",
+        "text": "Microsoft",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 1,
+            "snippet": "The primary contractor is Microsoft."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-dc443367-cbaa-4f52-b3e8-c7e677803d69",
+        "type": "ORGANIZATION",
+        "text": "Google",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 2,
+            "snippet": "The primary contractor is Google."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-551012f3-b81b-44cf-9839-0c73b3c38bd8",
+        "type": "DATE",
+        "text": "2023-01-01",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 1,
+            "snippet": "The project start date is 2023-01-01."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-67fc50f3-8ea2-4603-9069-735fac5a4433",
+        "type": "DATE",
+        "text": "2023-03-01",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 2,
+            "snippet": "The project start date is 2023-03-01."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-8550b4a3-c385-4e15-9b4b-64856bef4829",
+        "type": "MONEY",
+        "text": "$1,000,000",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 1,
+            "snippet": "The total budget is $1,000,000."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-0980a92b-93ad-4393-be3a-ca1028f83794",
+        "type": "MONEY",
+        "text": "$2,000,000",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 2,
+            "snippet": "The total budget is $2,000,000."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-212e44bf-c1b0-4ea1-b9e8-27581e3f3f34",
+        "type": "REQUIREMENT_ID",
+        "text": "REQ-101",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 1,
+            "snippet": "REQ-101: The system shall encrypt all user data."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      },
+      {
+        "id": "ent-fb2b9c50-b9e1-44b9-a9c3-f57c3b1f2b5f",
+        "type": "REQUIREMENT_ID",
+        "text": "REQ-102",
+        "confidence": 0.95,
+        "mentions": [
+          {
+            "page": 2,
+            "snippet": "See REQ-102 for security parameters."
+          }
+        ],
+        "frequency": 1,
+        "related_entities": [],
+        "boundingBox": null
+      }
+    ],
+    "keyValuePairs": [],
+    "entityConflicts": [
+      {
+        "entity_type": "active headcount",
+        "values": [
+          "5 members",
+          "4 members"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "description": "Conflicting 'is' for 'active headcount'. Page 1: \"The active headcount is 5 members.\" vs Page 2: \"The active headcount is 4 members.\""
+      },
+      {
+        "entity_type": "project start date",
+        "values": [
+          "2023-01-01",
+          "2023-03-01"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "description": "Conflicting 'is' for 'project start date'. Page 1: \"The project start date is 2023-01-01.\" vs Page 2: \"The project start date is 2023-03-01.\""
+      },
+      {
+        "entity_type": "total budget",
+        "values": [
+          "$1,000,000",
+          "$2,000,000"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "description": "Conflicting 'is' for 'total budget'. Page 1: \"The total budget is $1,000,000.\" vs Page 2: \"The total budget is $2,000,000.\""
+      },
+      {
+        "entity_type": "primary contractor",
+        "values": [
+          "Microsoft",
+          "Google"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "description": "Conflicting 'is' for 'primary contractor'. Page 1: \"The primary contractor is Microsoft.\" vs Page 2: \"The primary contractor is Google.\""
+      }
+    ],
+    "facts": [
+      {
+        "id": "fact-6dad15b9-bc6d-4a2d-88fc-e33f34c3513e",
+        "subject": "active headcount",
+        "predicate": "is",
+        "value": "5 members",
+        "confidence": 0.95,
+        "type": "numerical",
+        "evidence": "The active headcount is 5 members.",
+        "page": 1,
+        "chunk_id": "chunk-0"
+      },
+      {
+        "id": "fact-343e5f6e-ac9a-48f0-b324-f21cc58c3049",
+        "subject": "project start date",
+        "predicate": "is",
+        "value": "2023-01-01",
+        "confidence": 0.95,
+        "type": "temporal",
+        "evidence": "The project start date is 2023-01-01.",
+        "page": 1,
+        "chunk_id": "chunk-0"
+      },
+      {
+        "id": "fact-6d1c0811-1e5c-478f-a82c-3f9c492739a3",
+        "subject": "total budget",
+        "predicate": "is",
+        "value": "$1,000,000",
+        "confidence": 0.95,
+        "type": "numerical",
+        "evidence": "The total budget is $1,000,000.",
+        "page": 1,
+        "chunk_id": "chunk-0"
+      },
+      {
+        "id": "fact-2069ae28-0d76-4bc3-bb03-6aa9e05f270c",
+        "subject": "system",
+        "predicate": "shall encrypt",
+        "value": "all user data",
+        "confidence": 0.95,
+        "type": "requirement",
+        "evidence": "The system shall encrypt all user data.",
+        "page": 1,
+        "chunk_id": "chunk-0"
+      },
+      {
+        "id": "fact-545bcc47-1a5e-4b09-b982-a761215d026d",
+        "subject": "REQ-101",
+        "predicate": "is",
+        "value": "The system shall encrypt all user data.",
+        "confidence": 0.95,
+        "type": "requirement",
+        "evidence": "REQ-101: The system shall encrypt all user data.",
+        "page": 1,
+        "chunk_id": "chunk-0"
+      },
+      {
+        "id": "fact-6ca89b10-c796-4c71-8a41-3744104e9dfb",
+        "subject": "primary contractor",
+        "predicate": "is",
+        "value": "Microsoft",
+        "confidence": 0.95,
+        "type": "relational",
+        "evidence": "The primary contractor is Microsoft.",
+        "page": 1,
+        "chunk_id": "chunk-0"
+      },
+      {
+        "id": "fact-9d8954e7-62d1-4a61-9082-dc34ae7901bb",
+        "subject": "active headcount",
+        "predicate": "is",
+        "value": "4 members",
+        "confidence": 0.95,
+        "type": "numerical",
+        "evidence": "The active headcount is 4 members.",
+        "page": 2,
+        "chunk_id": "chunk-2"
+      },
+      {
+        "id": "fact-b7088b5a-1015-4b90-b351-853c92bc386b",
+        "subject": "project start date",
+        "predicate": "is",
+        "value": "2023-03-01",
+        "confidence": 0.95,
+        "type": "temporal",
+        "evidence": "The project start date is 2023-03-01.",
+        "page": 2,
+        "chunk_id": "chunk-2"
+      },
+      {
+        "id": "fact-7e470409-5e52-4474-a236-c6935a6e1289",
+        "subject": "total budget",
+        "predicate": "is",
+        "value": "$2,000,000",
+        "confidence": 0.95,
+        "type": "numerical",
+        "evidence": "The total budget is $2,000,000.",
+        "page": 2,
+        "chunk_id": "chunk-2"
+      },
+      {
+        "id": "fact-886fb88e-c5fa-4dad-bbbd-cb05f7dab561",
+        "subject": "system",
+        "predicate": "shall not encrypt",
+        "value": "all user data",
+        "confidence": 0.95,
+        "type": "requirement",
+        "evidence": "The system shall not encrypt all user data.",
+        "page": 2,
+        "chunk_id": "chunk-2"
+      },
+      {
+        "id": "fact-68e10cd9-947a-4e3c-99f4-de10c838cff4",
+        "subject": "primary contractor",
+        "predicate": "is",
+        "value": "Google",
+        "confidence": 0.95,
+        "type": "relational",
+        "evidence": "The primary contractor is Google.",
+        "page": 2,
+        "chunk_id": "chunk-2"
+      }
+    ],
+    "entityInconsistencies": [
+      {
+        "entity_text": "active headcount",
+        "entity_type": "ENTITY",
+        "attribute": "attribute",
+        "conflicting_values": [
+          "5 members",
+          "4 members"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "severity": "high",
+        "description": "Conflicting 'is' for 'active headcount'. Page 1: \"The active headcount is 5 members.\" vs Page 2: \"The active headcount is 4 members.\"",
+        "confidence": 0.95
+      },
+      {
+        "entity_text": "project start date",
+        "entity_type": "ENTITY",
+        "attribute": "attribute",
+        "conflicting_values": [
+          "2023-01-01",
+          "2023-03-01"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "severity": "high",
+        "description": "Conflicting 'is' for 'project start date'. Page 1: \"The project start date is 2023-01-01.\" vs Page 2: \"The project start date is 2023-03-01.\"",
+        "confidence": 0.95
+      },
+      {
+        "entity_text": "total budget",
+        "entity_type": "ENTITY",
+        "attribute": "attribute",
+        "conflicting_values": [
+          "$1,000,000",
+          "$2,000,000"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "severity": "high",
+        "description": "Conflicting 'is' for 'total budget'. Page 1: \"The total budget is $1,000,000.\" vs Page 2: \"The total budget is $2,000,000.\"",
+        "confidence": 0.95
+      },
+      {
+        "entity_text": "primary contractor",
+        "entity_type": "ENTITY",
+        "attribute": "attribute",
+        "conflicting_values": [
+          "Microsoft",
+          "Google"
+        ],
+        "pages": [
+          1,
+          2
+        ],
+        "severity": "high",
+        "description": "Conflicting 'is' for 'primary contractor'. Page 1: \"The primary contractor is Microsoft.\" vs Page 2: \"The primary contractor is Google.\"",
+        "confidence": 0.95
+      }
+    ],
+    "semanticConflicts": [
+      {
+        "id": "determ-numerical-3593953539378049449",
+        "statement_a": "statement a",
+        "statement_b": "statement b",
+        "page_a": 1,
+        "page_b": 1,
+        "semantic_distance": 0.5,
+        "conflict_score": 0.5,
+        "severity": "high",
+        "conflict_type": "logical",
+        "explanation": "The document assigns conflicting numerical values to 'The active headcount'. Page 1 states '5' while page 2 states '4'. One of these must be incorrect.",
+        "confidence": 0.92
+      },
+      {
+        "id": "determ-date-5116835122570204760",
+        "statement_a": "statement a",
+        "statement_b": "statement b",
+        "page_a": 1,
+        "page_b": 1,
+        "semantic_distance": 0.5,
+        "conflict_score": 0.5,
+        "severity": "high",
+        "conflict_type": "logical",
+        "explanation": "The document assigns conflicting date values to 'The project start date'. Page 1 states '2023-01-01' while page 2 states '2023-03-01'. One of these must be incorrect.",
+        "confidence": 0.9
+      },
+      {
+        "id": "determ-monetary-9207856410483271116",
+        "statement_a": "statement a",
+        "statement_b": "statement b",
+        "page_a": 1,
+        "page_b": 1,
+        "semantic_distance": 0.5,
+        "conflict_score": 0.5,
+        "severity": "high",
+        "conflict_type": "logical",
+        "explanation": "The document assigns conflicting monetary values to 'The active headcount'. Page 1 states '5 m' while page 2 states '4 m'. One of these must be incorrect.",
+        "confidence": 0.95
+      },
+      {
+        "id": "determ-monetary-6055278493146738812",
+        "statement_a": "statement a",
+        "statement_b": "statement b",
+        "page_a": 1,
+        "page_b": 1,
+        "semantic_distance": 0.5,
+        "conflict_score": 0.5,
+        "severity": "high",
+        "conflict_type": "logical",
+        "explanation": "The document assigns conflicting monetary values to 'The total budget'. Page 1 states '$1,000,000.' while page 2 states '$2,000,000.'. One of these must be incorrect.",
+        "confidence": 0.95
+      },
+      {
+        "id": "determ-req-3940786707686996049",
+        "statement_a": "statement a",
+        "statement_b": "statement b",
+        "page_a": 1,
+        "page_b": 1,
+        "semantic_distance": 0.5,
+        "conflict_score": 0.5,
+        "severity": "critical",
+        "conflict_type": "logical",
+        "explanation": "The document contains a direct requirement contradiction: page 1 states the system SHALL encrypt all user data, while page 2 states it SHALL NOT.",
+        "confidence": 0.93
+      },
+      {
+        "id": "sconf-8bd68f0e-58ab-44cb-b29c-3125e5a0add4",
+        "statement_a": "REQ-101 is The system shall encrypt all user data.",
+        "statement_b": "system shall not encrypt all user data",
+        "page_a": 1,
+        "page_b": 2,
+        "semantic_distance": 0.3785,
+        "conflict_score": 0.7786,
+        "severity": "high",
+        "conflict_type": "definitional",
+        "explanation": "Statement A asserts that the system is required to encrypt all user data, while Statement B explicitly states that the system shall not encrypt all user data. This creates a definitional contradiction as the two statements cannot both be true at the same time regarding the system's functionality.",
+        "confidence": 0.95
+      },
+      {
+        "id": "sconf-33f905f7-c8b7-4485-89aa-4b4d685543a0",
+        "statement_a": "primary contractor is Microsoft",
+        "statement_b": "primary contractor is Google",
+        "page_a": 1,
+        "page_b": 2,
+        "semantic_distance": 0.2255,
+        "conflict_score": 0.7326,
+        "severity": "high",
+        "conflict_type": "definitional",
+        "explanation": "The two statements define the primary contractor as two different entities, Microsoft and Google, which cannot both be true simultaneously in the same context. This contradiction is significant as it affects the understanding of who is responsible for the contract, which is crucial for accountability and clarity in contractual obligations.",
+        "confidence": 0.95
+      }
+    ],
+    "analyzedAt": "2026-06-16T14:23:30.556872"
+  },
+  "Trust Score Response": {
+    "score": 54.4,
+    "confidence": 0.833,
+    "breakdown": {
+      "contradiction_health": 8.0,
+      "reference_integrity": 92.0,
+      "requirement_traceability": 84.0,
+      "entity_consistency": 40.0,
+      "ambiguity_analysis": 100.0,
+      "document_completeness": 92.0
+    },
+    "deductions": [
+      {
+        "component": "Contradiction Health",
+        "points": 12.0,
+        "evidence": "Semantic conflict (high): 'Numerical conflict for 'The active headcount': '5' (page 1) vs '4' (page 2)'",
+        "page": 1,
+        "finding_id": "determ-numerical-3593953539378049449"
+      },
+      {
+        "component": "Contradiction Health",
+        "points": 12.0,
+        "evidence": "Semantic conflict (high): 'Date conflict for 'The project start date': '2023-01-01' (page 1) vs '2023-03-01' (page 2)'",
+        "page": 1,
+        "finding_id": "determ-date-5116835122570204760"
+      },
+      {
+        "component": "Contradiction Health",
+        "points": 12.0,
+        "evidence": "Semantic conflict (high): 'Monetary conflict for 'The active headcount': '5 m' (page 1) vs '4 m' (page 2)'",
+        "page": 1,
+        "finding_id": "determ-monetary-9207856410483271116"
+      },
+      {
+        "component": "Contradiction Health",
+        "points": 12.0,
+        "evidence": "Semantic conflict (high): 'Monetary conflict for 'The total budget': '$1,000,000.' (page 1) vs '$2,000,000.' (page 2)'",
+        "page": 1,
+        "finding_id": "determ-monetary-6055278493146738812"
+      },
+      {
+        "component": "Contradiction Health",
+        "points": 20.0,
+        "evidence": "Semantic conflict (critical): 'Requirement polarity conflict: 'system shall encrypt all user data' vs 'system shall not encrypt all user data''",
+        "page": 1,
+        "finding_id": "determ-req-3940786707686996049"
+      },
+      {
+        "component": "Contradiction Health",
+        "points": 12.0,
+        "evidence": "Semantic conflict (high): 'definitional'",
+        "page": 1,
+        "finding_id": "sconf-8bd68f0e-58ab-44cb-b29c-3125e5a0add4"
+      },
+      {
+        "component": "Contradiction Health",
+        "points": 12.0,
+        "evidence": "Semantic conflict (high): 'definitional'",
+        "page": 1,
+        "finding_id": "sconf-33f905f7-c8b7-4485-89aa-4b4d685543a0"
+      },
+      {
+        "component": "Reference Integrity",
+        "points": 8.0,
+        "evidence": "Broken reference: 'REQ-102' \u2192 target 'Requirement 102' not found",
+        "page": 2,
+        "finding_id": "ref-REQ-102-2"
+      },
+      {
+        "component": "Requirement Traceability",
+        "points": 4.0,
+        "evidence": "Requirement 'REQ 101' defined but never referenced (orphaned)",
+        "page": 1,
+        "finding_id": "req-orphaned-REQ 101"
+      },
+      {
+        "component": "Requirement Traceability",
+        "points": 12.0,
+        "evidence": "Requirement 'REQ 102' referenced but never defined",
+        "page": 2,
+        "finding_id": "req-missing-REQ 102"
+      },
+      {
+        "component": "Entity Consistency",
+        "points": 15.0,
+        "evidence": "Conflicting values for entity 'active headcount': '5 members' vs '4 members'",
+        "page": 1,
+        "finding_id": "ent-conflict-active headcount"
+      },
+      {
+        "component": "Entity Consistency",
+        "points": 15.0,
+        "evidence": "Conflicting values for entity 'project start date': '2023-01-01' vs '2023-03-01'",
+        "page": 1,
+        "finding_id": "ent-conflict-project start date"
+      },
+      {
+        "component": "Entity Consistency",
+        "points": 15.0,
+        "evidence": "Conflicting values for entity 'total budget': '$1,000,000' vs '$2,000,000'",
+        "page": 1,
+        "finding_id": "ent-conflict-total budget"
+      },
+      {
+        "component": "Entity Consistency",
+        "points": 15.0,
+        "evidence": "Conflicting values for entity 'primary contractor': 'Microsoft' vs 'Google'",
+        "page": 1,
+        "finding_id": "ent-conflict-primary contractor"
+      },
+      {
+        "component": "Document Completeness",
+        "points": 8.0,
+        "evidence": "Unresolved placeholder: 'TODO' on page 2",
+        "page": 2,
+        "finding_id": "comp-TODO-2"
+      }
+    ],
+    "evidence": "Trust score computed from 5 chunks across 6 dimensions. Breakdown \u2014 Contradictions: 8%, References: 92%, Requirements: 84%, Entities: 40%, Ambiguity: 100%, Completeness: 92%. Total deductions: 15."
+  },
+  "Vague Document Ambiguities Count": 0,
+  "Concurrent Status Codes": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "Concurrent Latency Seconds": 35.396945799991954
+}

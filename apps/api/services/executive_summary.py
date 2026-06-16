@@ -69,7 +69,7 @@ class ExecutiveSummaryService:
                 f"{f['subject']} {f['predicate']} {f.get('value') or f.get('object_value', '')}"
                 for f in facts[:15]
             ],
-            "semantic_conflicts": [f["summary"] for f in semantic_conflicts[:8]],
+            "semantic_conflicts": [f.get("summary") or f.get("explanation") or "" for f in semantic_conflicts[:8]],
             "broken_references": [f"{f['reference']} -> {f['target']}" for f in references if f["status"] == "BROKEN_REFERENCE"][:8],
             "requirements": [{"id": r["requirement_id"], "status": r["status"]} for r in requirements[:10]],
             "entity_conflicts": [f"{c['entity']}: '{c['value_a']}' vs '{c['value_b']}'" for c in entity_conflicts[:8]],

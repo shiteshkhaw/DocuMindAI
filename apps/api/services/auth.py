@@ -43,26 +43,30 @@ class AuthService:
             expire = (datetime.now(timezone.utc) + expires_delta).replace(tzinfo=None)
         else:
             expire = (datetime.now(timezone.utc) + timedelta(minutes=15)).replace(tzinfo=None)
-        to_encode.update({"exp": expire})
+        to_encode.update({
+            "exp": expire,
+            "jti": str(uuid.uuid4())
+        })
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
-    async def signup(self, user_in: UserCreate) -> UserModel:
+    async def signup(self, user_in: UserCreate, generate_token: bool = True) -> UserModel:
         query = select(UserModel).where(UserModel.email == user_in.email)
         result = await self.db.execute(query)
         if result.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Email already registered")
             
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         user = UserModel(
             id=f"usr-{uuid.uuid4()}",
             email=user_in.email,
             name=user_in.name,
             password_hash=self.get_password_hash(user_in.password),
-            auth_provider="local"
+            auth_provider="local",
+            created_at=now,
+            updated_at=now
         )
         self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
         
         # Create default workspace
         from models.workspace import WorkspaceModel
@@ -70,11 +74,35 @@ class AuthService:
             id=f"ws-{uuid.uuid4()}",
             user_id=user.id,
             name="Personal Workspace",
-            description="Your default workspace"
+            description="Your default workspace",
+            created_at=now
         )
         self.db.add(default_workspace)
-        await self.db.commit()
         
+        if generate_token:
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = self.create_access_token(
+                data={"sub": user.id}, expires_delta=access_token_expires
+            )
+            refresh_token = f"rf-{uuid.uuid4()}"
+            
+            session = SessionModel(
+                id=f"sess-{uuid.uuid4()}",
+                user_id=user.id,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).replace(tzinfo=None),
+                created_at=now
+            )
+            self.db.add(session)
+            
+            # Dynamically attach token details
+            user.access_token = access_token
+            user.refresh_token = refresh_token
+            user.token_type = "bearer"
+            user.expires_in = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            
+        await self.db.commit()
         return user
 
     async def login(self, user_in: UserLogin) -> TokenResponse:
@@ -85,7 +113,6 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Incorrect email or password")
             
         user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        await self.db.commit()
 
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = self.create_access_token(
@@ -103,10 +130,21 @@ class AuthService:
         self.db.add(session)
         await self.db.commit()
         
+        from schemas.auth import UserResponse
+        user_res = UserResponse(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+        
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            token_type="bearer",
+            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=user_res
         )
 
     async def google_login(self, token: str) -> TokenResponse:
@@ -135,14 +173,15 @@ class AuthService:
         result = await self.db.execute(query)
         user = result.scalar_one_or_none()
 
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
         if user:
             # Link google_id if not linked
             if not user.google_id:
                 user.google_id = google_id
                 if user.auth_provider == "local":
                     user.auth_provider = "local_google"
-            user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            await self.db.commit()
+            user.last_login_at = now
         else:
             # Auto-provision user
             user = UserModel(
@@ -151,11 +190,11 @@ class AuthService:
                 name=name,
                 password_hash=None,
                 google_id=google_id,
-                auth_provider="google"
+                auth_provider="google",
+                created_at=now,
+                updated_at=now
             )
             self.db.add(user)
-            await self.db.commit()
-            await self.db.refresh(user)
 
             # Create default workspace
             from models.workspace import WorkspaceModel
@@ -163,10 +202,10 @@ class AuthService:
                 id=f"ws-{uuid.uuid4()}",
                 user_id=user.id,
                 name="Personal Workspace",
-                description="Your default workspace"
+                description="Your default workspace",
+                created_at=now
             )
             self.db.add(default_workspace)
-            await self.db.commit()
 
         # Generate session identical to local login
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -180,15 +219,27 @@ class AuthService:
             user_id=user.id,
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).replace(tzinfo=None)
+            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).replace(tzinfo=None),
+            created_at=now
         )
         self.db.add(session)
         await self.db.commit()
 
+        from schemas.auth import UserResponse
+        user_res = UserResponse(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            token_type="bearer",
+            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=user_res
         )
         
     async def logout(self, access_token: str):
