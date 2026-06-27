@@ -727,7 +727,7 @@ export default function DashboardPage() {
           <DropdownTrigger>
             <button className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-secondary/60 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-none">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-sm shadow-primary/10 border border-border/50 bg-background">
-                <Image src={logoImg} alt="DocuMind AI Logo" className="h-full w-full object-cover" priority />
+                <Image src={logoImg} alt="DocuMind AI Logo" className="h-full w-full object-cover mix-blend-multiply" priority />
               </div>
               <div className="flex items-center gap-1">
                 <div>
@@ -1504,6 +1504,22 @@ export default function DashboardPage() {
         }}
         className="absolute top-0 right-1/4 w-[650px] h-[650px] bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 rounded-full blur-[140px] pointer-events-none z-0 dark:from-indigo-500/2 dark:to-purple-500/2"
       />
+      
+      {/* Faint Background Watermark Logo */}
+      <motion.div
+        animate={{
+          y: [0, -15, 0],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden opacity-[0.025] dark:opacity-[0.008]"
+      >
+        <Image src={logoImg} alt="" className="w-[450px] h-[450px] object-contain mix-blend-multiply" />
+      </motion.div>
+
       <motion.div
         animate={{
           x: [0, -30, 20, 0],
