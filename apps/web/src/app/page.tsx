@@ -39,9 +39,10 @@ import {
   Zap,
   Menu,
   X,
-  PanelLeftClose,
   PanelLeftOpen,
-  Lock
+  PanelLeftClose,
+  Lock,
+  Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -71,7 +72,7 @@ import {
   ModalFooter
 } from "@documind/ui";
 import { useChatStore } from "../store/useChatStore";
-import { Message, DocumentAnalysis, HealthStatus, RetrievalDiagnostics, TrustScore, ExecutiveSummary, ReviewCopilot, AmbiguityFinding, ReferenceItem, RequirementItem } from "@documind/types";
+import { Message, DocumentAnalysis, HealthStatus, RetrievalDiagnostics, TrustScore, ExecutiveSummary, ReviewCopilot, AmbiguityFinding, ReferenceItem, RequirementItem, Document, ChatSession } from "@documind/types";
 
 // We use the singleton sdk from useAuthStore to ensure tokens are attached
 import { sdk, useAuthStore } from "../store/useAuthStore";
@@ -223,6 +224,278 @@ function EntityRelationshipGraph({ entities }: { entities: any[] }) {
   );
 }
 
+// ── Simulated Mock Data for Recruiter Interactive Tour ─────────────────
+const simulatedDocs: Document[] = [
+  {
+    id: "doc-simulated-1",
+    name: "Sales_Headcount_Contract_2026.pdf",
+    storageUrl: "https://storage.documind.ai/simulated/Sales_Headcount_Contract_2026.pdf",
+    status: "COMPLETED",
+    progress_percentage: 100,
+    metadata: {
+      title: "Sales Headcount Contract 2026",
+      fileSize: 45280,
+      mimeType: "application/pdf",
+      checksum: "chk-sim-1",
+      pageCount: 12
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "doc-simulated-2",
+    name: "Alpha_Project_Charter_v2.docx",
+    storageUrl: "https://storage.documind.ai/simulated/Alpha_Project_Charter_v2.docx",
+    status: "COMPLETED",
+    progress_percentage: 100,
+    metadata: {
+      title: "Alpha Project Charter v2",
+      fileSize: 120400,
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      checksum: "chk-sim-2",
+      pageCount: 8
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+];
+
+const simulatedSession: ChatSession = {
+  id: "sess-simulated-1",
+  title: "Simulated Demo Workspace",
+  documentIds: ["doc-simulated-1", "doc-simulated-2"],
+  messages: [
+    {
+      id: "msg-sim-1",
+      role: "user",
+      content: "Analyze the headcount targets and check for any compliance or contractual inconsistencies between these two documents.",
+      createdAt: new Date(Date.now() - 600000).toISOString()
+    },
+    {
+      id: "msg-sim-2",
+      role: "assistant",
+      content: "I have audited both **Sales_Headcount_Contract_2026.pdf** and **Alpha_Project_Charter_v2.docx** across all pages.\n\n### Core Inconsistency Found:\nThere is a critical **headcount target mismatch** between Section 3.2 of the Project Charter and Appendix A of the Headcount Contract:\n- **Alpha_Project_Charter_v2.docx (Section 3.2)**: Mandates a hard hiring target of **60 full-time employees** by Q4 2026.\n- **Sales_Headcount_Contract_2026.pdf (Appendix A)**: Limits total vendor-allocated headcount expense to a maximum of **45 employees**.\n\n### Other Findings:\n1. **Timeline Contradiction**: The Project Charter schedules the kickoff for October 10, 2026, but the Headcount Contract states vendor support cannot commence before November 1, 2026.\n2. **Termination Clause Ambiguity**: The term 'reasonable notice period' is used without defining the exact number of days required for notice.\n\n*Check the other tabs above (Contradiction Intelligence, Entity Map, and Document Intelligence) for interactive breakdowns of these findings.*",
+      createdAt: new Date(Date.now() - 540000).toISOString(),
+      citations: [
+        { documentId: "doc-simulated-1", documentName: "Sales_Headcount_Contract_2026.pdf", pageNumber: 8, snippet: "The vendor-allocated expenses shall under no circumstances support headcount exceeding 45 full-time personnel.", score: 0.94 },
+        { documentId: "doc-simulated-2", documentName: "Alpha_Project_Charter_v2.docx", pageNumber: 4, snippet: "Project Alpha mandates the onboarding of 60 full-time resources by Q4 2026 to hit phase 2 launch timelines.", score: 0.96 }
+      ]
+    }
+  ],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+};
+
+const simulatedContradictions = [
+  {
+    id: "contra-1",
+    severity: "high",
+    type: "numerical",
+    confidence: 0.98,
+    summary: "Headcount limit mismatch: 45 vs 60 employees",
+    explanation: "Section 3.2 of the Project Charter specifies a mandatory hiring objective of 60 employees for Q4 2026. However, Appendix A of the Sales Headcount Contract limits total budget allocation to a maximum headcount of 45 employees. Proceeding with the project charter will result in an unbudgeted deficit of 15 headcount allocations.",
+    citations: [
+      { documentName: "Alpha_Project_Charter_v2.docx", pageNumber: 4, snippet: "Project Alpha mandates the onboarding of 60 full-time resources by Q4 2026 to hit phase 2 launch timelines." },
+      { documentName: "Sales_Headcount_Contract_2026.pdf", pageNumber: 8, snippet: "The vendor-allocated expenses shall under no circumstances support headcount exceeding 45 full-time personnel." }
+    ],
+    conflictingStatements: [
+      { page: 4, text: "Project Alpha mandates the onboarding of 60 full-time resources by Q4 2026." },
+      { page: 8, text: "Headcount under no circumstances shall exceed 45 full-time personnel." }
+    ]
+  },
+  {
+    id: "contra-2",
+    severity: "medium",
+    type: "timeline",
+    confidence: 0.88,
+    summary: "Kickoff scheduled before contract effective date",
+    explanation: "The Project Charter sets the initial kickoff and deployment date for October 10, 2026. However, the Headcount Contract states the effective start date for vendor support personnel is November 1, 2026, creating a 22-day operational gap where resources are not contracted to perform services.",
+    citations: [
+      { documentName: "Alpha_Project_Charter_v2.docx", pageNumber: 1, snippet: "Kickoff and resource onboarding is scheduled to initiate on October 10, 2026." },
+      { documentName: "Sales_Headcount_Contract_2026.pdf", pageNumber: 2, snippet: "The effective date of this agreement and commencement of active billing is November 1, 2026." }
+    ],
+    conflictingStatements: [
+      { page: 1, text: "Kickoff and onboarding scheduled to initiate on October 10, 2026." },
+      { page: 2, text: "Effective start date for vendor active billing is November 1, 2026." }
+    ]
+  }
+];
+
+const simulatedTelemetry = {
+  retrievalCount: 18,
+  contradictionCount: 2,
+  reasoningLatency: 1.45,
+  orchestrationLatency: 0.32,
+  providerLatency: 1.13
+};
+
+const simulatedTrustScore = {
+  score: 84,
+  deductions: [
+    { component: "numerical consistency", points: 8.5, evidence: "Severe mismatch in resource allocation headcount between Charter (60) and Contract (45)." },
+    { component: "timeline alignment", points: 4.5, evidence: "Kickoff schedule (Oct 10) precedes contract commencement date (Nov 1)." },
+    { component: "completeness", points: 3.0, evidence: "Missing explicit notice term definitions for the termination clause." }
+  ],
+  evidence: "The workspace contains 2 documents with an average trust score of 84.0%. The documents are mostly compliant but contain high-risk resource conflicts and a minor timeline misalignment."
+};
+
+const simulatedExecutiveSummary: ExecutiveSummary = {
+  executive_summary: "This report covers the audit of Project Alpha's resources and contractual bounds. The documents contain a core operational conflict: the project plan requires 60 personnel, while the budget agreement only funds 45 vendor allocations. Kickoff dates are also out of sync with contract billing cycles.",
+  key_findings: [
+    "Budget limit is capped at 45 vendor allocations.",
+    "Kickoff schedule (Oct 10) precedes contract billing commencement date (Nov 1)."
+  ],
+  critical_risks: [
+    "Resource shortfall: Kickoff requires 15 more resources than budgeted in the Headcount Contract.",
+    "Kickoff gap: 22 uncontracted/unbilled days at project start."
+  ],
+  major_contradictions: [
+    "Numerical: 45 vs 60 maximum resource headcount.",
+    "Temporal: October 10 Kickoff vs November 1 Contract Start."
+  ],
+  important_entities: [
+    "DocuMind Corp (Vendor)",
+    "Acme Inc (Customer)",
+    "Project Alpha (Scope)"
+  ],
+  requirements_overview: "The workspace contains contradictory hiring requirements (60 vs 45 headcount) and timeline alignment discrepancies.",
+  trust_assessment: "High probability of operational friction and cost overruns due to misaligned constraints. Budget must be revised to fund 60 resources or charter targets must scale down.",
+  recommended_actions: [
+    "Renegotiate Appendix A budget allocation to support 60 FTEs.",
+    "Postpone Project Kickoff to November 1 to align with active billing start date."
+  ]
+};
+
+const simulatedReviewCopilot: ReviewCopilot = {
+  reviewer_checklist: [
+    { id: "chk-1", category: "hiring", item: "Verify headcount limits align across deliverables", status: "fail", detail: "Charter states 60, contract states 45.", evidence: "Appendix A cap vs Sec 3.2 targets" },
+    { id: "chk-2", category: "legal", item: "Ensure effective date covers kickoff date", status: "fail", detail: "Nov 1 start date leaves Oct 10-31 unbilled.", evidence: "Kickoff timeline alignment" },
+    { id: "chk-3", category: "structure", item: "Verify signature section completeness", status: "pass", detail: "All vendor and customer sign-off blocks present.", evidence: "Sec 8 signed sheets" }
+  ],
+  open_questions: [
+    "Should Acme Corp fund the extra 15 resources under a separate amendment?",
+    "Can kickoff be delayed to match the contract effective date?"
+  ],
+  compliance_concerns: [
+    "Unbilled work risk: Performing kickoff services prior to effective date violates billing terms."
+  ],
+  risk_items: [
+    "Project delay due to staffing shortage if headcount contract is not amended."
+  ],
+  verification_tasks: [
+    "Verify with finance if budget exists for 60 headcount."
+  ]
+};
+
+const simulatedAmbiguities: AmbiguityFinding[] = [
+  {
+    id: "amb-1",
+    chunk_index: 2,
+    page: 3,
+    type: "Vague Notice Timeframe",
+    severity: "medium",
+    snippet: "notice period within a reasonable timeframe",
+    matched_pattern: "reasonable timeframe",
+    suggestion: "Define explicitly as '30 calendar days' to avoid notice timeline disputes."
+  },
+  {
+    id: "amb-2",
+    chunk_index: 4,
+    page: 5,
+    type: "Subjective SLA Benchmark",
+    severity: "low",
+    snippet: "efforts consistent with industry norms",
+    matched_pattern: "consistent with industry norms",
+    suggestion: "Specify exact SLA percentage metrics (e.g., '99.9% uptime uptime guarantee')."
+  }
+];
+
+const simulatedReferences: ReferenceItem[] = [
+  {
+    id: "ref-1",
+    raw: "Appendix A headcount capacity limits",
+    status: "unresolved",
+    ref_type: "headcount cap link",
+    page: 8,
+    detail: "Resource targets in charter Sec 3.2 mismatch contract Appendix A capacity of 45."
+  },
+  {
+    id: "ref-2",
+    raw: "Section 2.1 Commencement terms",
+    status: "resolved",
+    ref_type: "effective date link",
+    page: 2,
+    detail: "Refers to the commencement of active billing cycles."
+  }
+];
+
+const simulatedRequirements: RequirementItem[] = [
+  {
+    id: "req-1",
+    req_id: "REQ-ONBOARD-60",
+    status: "ORPHANED",
+    description: "Onboard 60 resources by Q4 2026",
+    defined_page: 4,
+    referenced_pages: [4],
+    chunk_indices: [12]
+  },
+  {
+    id: "req-2",
+    req_id: "REQ-CAP-45",
+    status: "DEFINED",
+    description: "Limit expenses to 45 resources max",
+    defined_page: 8,
+    referenced_pages: [8],
+    chunk_indices: [24]
+  },
+  {
+    id: "req-3",
+    req_id: "REQ-REPORTING",
+    status: "REFERENCED",
+    description: "Deliver monthly progress reports to Acme Inc",
+    defined_page: 11,
+    referenced_pages: [11, 12],
+    chunk_indices: [32, 33]
+  }
+];
+
+
+const simulatedEntityAnalysis: DocumentAnalysis = {
+  documentId: "doc-simulated-1",
+  analyzedAt: new Date().toISOString(),
+  summary: {
+    abstract: "This analysis covers the structural and operational entities inside the Headcount Contract and Project Charter. Key entities including organizations (DocuMind Corp, Acme Inc), signing officers, dates, and quantitative resource targets have been extracted and mapped to analyze cross-document links.",
+    keyPoints: [
+      "Extracted 2 corporate entities: DocuMind Corp and Acme Inc.",
+      "Identified active personnel: John Doe (Lead Signatory).",
+      "Mapped timeline markers for resource kickoff (Oct 10, 2026) and billing commencement (Nov 1, 2026).",
+      "Extracted key target volumes: 60 resources (Charter) and 45 resources (Contract)."
+    ],
+    suggestedQuestions: [
+      "What is the budget for 60 headcount?",
+      "What is the effective date of the contract?"
+    ]
+  },
+  entities: [
+    { id: "ent-1", text: "DocuMind Corp", type: "ORGANIZATION", frequency: 8, related_entities: ["Acme Inc", "John Doe"], confidence: 0.99, mentions: [{ page: 1, snippet: "DocuMind Corp agreement details" }] },
+    { id: "ent-2", text: "Acme Inc", type: "ORGANIZATION", frequency: 6, related_entities: ["DocuMind Corp", "John Doe"], confidence: 0.99, mentions: [{ page: 1, snippet: "Acme Inc agreement details" }] },
+    { id: "ent-3", text: "John Doe", type: "PERSON", frequency: 4, related_entities: ["DocuMind Corp", "Acme Inc"], confidence: 0.95, mentions: [{ page: 12, snippet: "Signed by John Doe" }] },
+    { id: "ent-4", text: "October 10, 2026", type: "DATE", frequency: 3, related_entities: ["DocuMind Corp"], confidence: 0.90, mentions: [{ page: 1, snippet: "kickoff October 10, 2026" }] },
+    { id: "ent-5", text: "November 1, 2026", type: "DATE", frequency: 3, related_entities: ["Acme Inc"], confidence: 0.90, mentions: [{ page: 2, snippet: "effective November 1, 2026" }] },
+    { id: "ent-6", text: "60 resources", type: "PRODUCT", frequency: 5, related_entities: ["DocuMind Corp"], confidence: 0.85, mentions: [{ page: 4, snippet: "60 full-time resources" }] },
+    { id: "ent-7", text: "45 resources", type: "PRODUCT", frequency: 4, related_entities: ["Acme Inc"], confidence: 0.85, mentions: [{ page: 8, snippet: "maximum of 45 resources" }] }
+  ],
+  entityConflicts: [
+    { entity_type: "headcount", values: ["60 resources", "45 resources"], pages: [4, 8], description: "Project Charter mandates hiring 60 resources, conflicting with the Contract limit of 45 resources." }
+  ],
+  keyValuePairs: [
+    { id: "kv-1", key: "Max Vendor Headcount", value: "45 resources", confidence: 0.95 },
+    { id: "kv-2", key: "Project Target Headcount", value: "60 resources", confidence: 0.95 },
+    { id: "kv-3", key: "Kickoff Date", value: "October 10, 2026", confidence: 0.90 },
+    { id: "kv-4", key: "Contract Billing Start", value: "November 1, 2026", confidence: 0.90 }
+  ]
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading, initialize: initAuth } = useAuthStore();
@@ -241,6 +514,54 @@ export default function DashboardPage() {
       { id: `log-${Date.now()}-${Math.random()}`, time: timeStr, level, message }
     ]);
   }, []);
+
+  const handleLaunchRecruiterTour = () => {
+    // 1. Populate useChatStore with simulated documents and session
+    setDocuments(simulatedDocs);
+    setSelectedDocumentIds(["doc-simulated-1", "doc-simulated-2"]);
+    setActiveSession(simulatedSession);
+    
+    // 2. Populate contradiction insights
+    setContradictionInsights(simulatedContradictions);
+    setContradictionTelemetry(simulatedTelemetry);
+    setSelectedContradictionDocId("doc-simulated-1");
+    setExpandedContradictionId("contra-1");
+    setExpandedReasoningMap({
+      "contra-1": { why: true, evidence: true, timeline: true, numerical: true },
+      "contra-2": { why: true, evidence: false, timeline: false, numerical: false }
+    });
+
+    // 3. Populate Document Intelligence
+    setTrustScore(simulatedTrustScore);
+    setExecutiveSummary(simulatedExecutiveSummary);
+    setReviewCopilot(simulatedReviewCopilot);
+    setAmbiguities(simulatedAmbiguities);
+    setReferences(simulatedReferences);
+    setRequirements(simulatedRequirements);
+    setIntelligenceDocId("doc-simulated-1");
+
+    // 4. Populate Entity Analysis
+    setEntityAnalysis(simulatedEntityAnalysis);
+    setEntityDocId("doc-simulated-1");
+
+    // 5. Populate Health Status
+    setHealthStatus({
+      status: "healthy",
+      service: "DocuMind AI",
+      postgres: "connected",
+      chroma: "connected",
+      chroma_backend: "Chroma Cloud Shard",
+      chroma_collection_count: 14,
+      embedding_provider: "Gemini Embeddings (Active)",
+      llm_providers: ["Gemini 1.5 Flash (Active)", "Claude 3.5 Sonnet (Active)", "DeepSeek R1 via Groq (Active)"]
+    } as any);
+
+    // 6. Navigate to chat
+    setActiveTab("chat");
+
+    addLog("SUCCESS", "Recruiter Tour initialized. Workspace loaded with pre-analyzed files.");
+    addLog("INFO", "Use the tabs above to explore Contradictions, Entities, and Compliance reports.");
+  };
 
   React.useEffect(() => {
     initAuth();
@@ -1171,8 +1492,30 @@ export default function DashboardPage() {
       )}
       
       {/* Premium ambient glows */}
-      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none z-0 dark:bg-indigo-500/2" />
-      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0 dark:bg-primary/2" />
+      <motion.div
+        animate={{
+          x: [0, 30, -20, 0],
+          y: [0, -40, 20, 0],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute top-0 right-1/4 w-[650px] h-[650px] bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 rounded-full blur-[140px] pointer-events-none z-0 dark:from-indigo-500/2 dark:to-purple-500/2"
+      />
+      <motion.div
+        animate={{
+          x: [0, -30, 20, 0],
+          y: [0, 40, -20, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute bottom-0 left-1/4 w-[450px] h-[450px] bg-gradient-to-br from-primary/5 to-sky-500/5 rounded-full blur-[100px] pointer-events-none z-0 dark:from-primary/2 dark:to-sky-500/2"
+      />
 
       {/* Main shell layer */}
       <div className="flex w-full h-full z-10 relative dot-grid">
@@ -1259,6 +1602,7 @@ export default function DashboardPage() {
                   ⌘K
                 </kbd>
               </button>
+
 
               {/* Status Badge */}
               <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 shadow-2xs">
@@ -3028,6 +3372,26 @@ export default function DashboardPage() {
                       </Button>
                     </div>
 
+                    {/* Simulated Workspace Sandbox Card */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border border-card-border bg-card/60 rounded-2xl shadow-xs">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                          <Database className="h-5 w-5 text-indigo-500" />
+                          Simulated Sandbox Environment
+                        </h3>
+                        <p className="text-xs text-muted-foreground text-left">
+                          Load a pre-configured simulation workspace with dual-source documents, cross-document conflicts, entity telemetry, and RAG logs for debugging and validation purposes.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleLaunchRecruiterTour}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-500/10 shrink-0"
+                      >
+                        <Play className="h-3 w-3" />
+                        Load Sandbox Workspace
+                      </Button>
+                    </div>
+
                     {/* Report Summary */}
                     {validationReport && (
                       <div className="space-y-8 animate-fade-in text-left">
@@ -3196,7 +3560,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Workspace Statistics Widgets */}
                 <div className="space-y-3">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                     Workspace Statistics

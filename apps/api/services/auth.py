@@ -1,5 +1,6 @@
 import uuid
 import logging
+import httpx
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -97,10 +98,10 @@ class AuthService:
             self.db.add(session)
             
             # Dynamically attach token details
-            user.access_token = access_token
-            user.refresh_token = refresh_token
-            user.token_type = "bearer"
-            user.expires_in = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            setattr(user, "access_token", access_token)
+            setattr(user, "refresh_token", refresh_token)
+            setattr(user, "token_type", "bearer")
+            setattr(user, "expires_in", ACCESS_TOKEN_EXPIRE_MINUTES * 60)
             
         await self.db.commit()
         return user
@@ -150,15 +151,17 @@ class AuthService:
     async def google_login(self, token: str) -> TokenResponse:
         try:
             # The token from useGoogleLogin (implicit flow) is an access token
-            import requests
-            response = requests.get(
-                "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {token}"}
-            )
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=10.0
+                )
             if response.status_code != 200:
                 raise ValueError("Invalid token")
             idinfo = response.json()
-        except ValueError:
+        except (ValueError, httpx.HTTPError) as e:
+            logger.error(f"[AUTH] Google token validation failed: {e}")
             raise HTTPException(status_code=401, detail="Invalid Google token")
 
         email = idinfo.get("email")

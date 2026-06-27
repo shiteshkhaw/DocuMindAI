@@ -17,6 +17,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
 
+  React.useEffect(() => {
+    // Warm up Render backend API (addresses free tier sleep cold start)
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://documind-api-qzei.onrender.com";
+    fetch(`${apiBaseUrl.replace(/\/$/, "")}/health`).catch((err) => {
+      console.warn("API pre-warm ping failed", err);
+    });
+  }, []);
+
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "missing-client-id"}>
       <QueryClientProvider client={queryClient}>

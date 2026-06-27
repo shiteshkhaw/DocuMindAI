@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   title: "DocuMind AI — Enterprise Document Intelligence SaaS",
   description:
     "AI-powered document intelligence SaaS platform with RAG, conversational AI, semantic search, and multi-document analysis.",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  }
 };
 
 export default function RootLayout({

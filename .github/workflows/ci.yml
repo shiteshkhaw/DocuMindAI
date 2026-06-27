@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: Continuous Integration & Deployment
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ main, master ]
 
 jobs:
-  lint-and-typecheck-fe:
-    name: Frontend CI (Lint & Typecheck)
+  lint-and-build-fe:
+    name: Frontend CI (Lint, Typecheck & Build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -43,8 +43,11 @@ jobs:
       - name: Check Formatting & Linting
         run: pnpm run lint
 
-  typecheck-and-test-be:
-    name: Backend CI (Python Lint & Static Analysis)
+      - name: Build Monorepo (Verify Compilation)
+        run: pnpm run build
+
+  test-and-verify-be:
+    name: Backend CI (Lint, Static Analysis & Tests)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -60,10 +63,46 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r apps/api/requirements.txt
-          pip install ruff mypy
+          pip install ruff mypy pytest pytest-asyncio
 
       - name: Ruff Linter Check
         run: ruff check apps/api
 
       - name: Ruff Formatter Check
         run: ruff format --check apps/api
+
+      - name: Run Backend Tests
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          JWT_SECRET: testing-secret-key-32-chars-long-or-more
+        run: |
+          cd apps/api
+          python -m pytest
+
+  deploy:
+    name: Continuous Deployment (Vercel & Render)
+    needs: [lint-and-build-fe, test-and-verify-be]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Backend to Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Triggering Render redeployment..."
+            curl -f "$RENDER_DEPLOY_HOOK_URL"
+          else
+            echo "RENDER_DEPLOY_HOOK_URL is not set. Skipping active Render API deployment."
+          fi
+
+      - name: Deploy Frontend to Vercel
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "Triggering Vercel deployment hook..."
+            curl -f -X POST "$VERCEL_DEPLOY_HOOK_URL"
+          else
+            echo "VERCEL_DEPLOY_HOOK_URL is not set. Vercel fallback: Git integration will auto-deploy on push."
+          fi
