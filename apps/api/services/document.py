@@ -70,6 +70,27 @@ class DocumentService:
             workspace_id=workspace_id,
         )
 
+        # Fallback/In-Process Execution: Run in-process asynchronously to ensure the document
+        # gets fully chunked, vector indexed, and analyzed even if the background Dramatiq
+        # worker is not running (common in local dev and single-instance deployments like Render/Railway).
+        from config import settings
+        from workers.broker import is_stub_broker
+        import os
+        run_in_process = os.getenv("RUN_WORKERS_IN_PROCESS", "true").lower() == "true"
+        if is_stub_broker() or settings.SENTRY_ENVIRONMENT == "development" or run_in_process:
+            from workers.document_ingestion import _run_async_ingestion
+            import asyncio
+            asyncio.create_task(
+                _run_async_ingestion(
+                    document_id=doc_id,
+                    storage_key=storage_key,
+                    filename=filename,
+                    mime_type=content_type,
+                    user_id=user_id,
+                    workspace_id=workspace_id,
+                )
+            )
+
         return created_doc
 
     async def delete_document(self, id: str) -> bool:
