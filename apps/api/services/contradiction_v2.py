@@ -212,15 +212,16 @@ class ContradictionEngine:
         results = await asyncio.gather(*analysis_tasks, return_exceptions=True)
 
         for r_list in results:
-            if isinstance(r_list, Exception):
+            if isinstance(r_list, BaseException):
                 logger.error(f"[ContradictionEngine] Analysis task failed: {r_list}", exc_info=True)
                 continue
-            for item in r_list:
-                summ = item.get("summary", "").lower().strip()
-                if summ and summ not in seen_summaries:
-                    seen_summaries.add(summ)
-                    all_findings.append(item)
-                    yield {"type": "insight", "insight": item}
+            if isinstance(r_list, list):
+                for item in r_list:
+                    summ = item.get("summary", "").lower().strip()
+                    if summ and summ not in seen_summaries:
+                        seen_summaries.add(summ)
+                        all_findings.append(item)
+                        yield {"type": "insight", "insight": item}
 
         orch_duration = time.perf_counter() - start_time
         telemetry = {

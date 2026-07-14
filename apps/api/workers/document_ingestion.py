@@ -2,6 +2,15 @@ import asyncio
 import logging
 import dramatiq
 
+# Import all SQLAlchemy models to guarantee they are registered in the metadata registry before database queries
+from models.auth import UserModel, SessionModel
+from models.workspace import WorkspaceModel
+from models.document import DocumentModel
+from models.analysis import DocumentAnalysisModel
+from models.chat import ChatSessionModel, MessageModel
+from models.organization import OrganizationModel, OrganizationMemberModel
+from models.audit import AuditLogModel
+
 from db.session import async_session_factory
 from orchestration.service import IngestionOrchestrator
 from services.dependencies import get_embedding_provider, get_vector_store

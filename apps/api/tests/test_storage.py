@@ -111,7 +111,7 @@ async def test_supabase_storage_provider(mock_client_cls) -> None:
         downloaded = await provider.download_file(key)
         assert downloaded == data
         mock_client.get.assert_called_once_with(
-            "https://mock-supabase.co/storage/v1/object/authenticated/documents/test_supabase.txt",
+            "https://mock-supabase.co/storage/v1/object/authenticated/documind-vault/documents/test_supabase.txt",
             headers={"Authorization": "Bearer service-role-key"}
         )
 
@@ -121,7 +121,7 @@ async def test_supabase_storage_provider(mock_client_cls) -> None:
         exists = await provider.file_exists(key)
         assert exists is True
         mock_client.get.assert_called_once_with(
-            "https://mock-supabase.co/storage/v1/object/info/authenticated/documents/test_supabase.txt",
+            "https://mock-supabase.co/storage/v1/object/info/authenticated/documind-vault/documents/test_supabase.txt",
             headers={"Authorization": "Bearer service-role-key"}
         )
 

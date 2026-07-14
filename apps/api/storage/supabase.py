@@ -120,7 +120,7 @@ class SupabaseStorageProvider(BaseStorageProvider):
     async def download_file(self, key: str) -> bytes:
         logger.info(f"[SupabaseStorage] Downloading key={key}")
         clean_key = key.lstrip("/")
-        url = f"{self.supabase_url.rstrip('/')}/storage/v1/object/authenticated/{clean_key}"
+        url = f"{self.supabase_url.rstrip('/')}/storage/v1/object/authenticated/{self.bucket_name}/{clean_key}"
         headers = {"Authorization": f"Bearer {self.service_role_key}"}
 
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -194,7 +194,7 @@ class SupabaseStorageProvider(BaseStorageProvider):
 
     async def file_exists(self, key: str) -> bool:
         clean_key = key.lstrip("/")
-        url = f"{self.supabase_url.rstrip('/')}/storage/v1/object/info/authenticated/{clean_key}"
+        url = f"{self.supabase_url.rstrip('/')}/storage/v1/object/info/authenticated/{self.bucket_name}/{clean_key}"
         headers = {"Authorization": f"Bearer {self.service_role_key}"}
 
         logger.info(f"[SupabaseStorage] Checking existence of key={key}")
