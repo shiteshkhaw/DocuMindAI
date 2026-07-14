@@ -58,6 +58,25 @@ class ChatService:
         await self.message_repo.create(user_msg)
         await self.message_repo.db.flush()
 
+        # ── Caching Layer: Repeated Query Check (Section 7 Requirements) ─────
+        import hashlib
+        from services.cache import cache_service
+        query_hash = hashlib.sha256(content.strip().encode("utf-8")).hexdigest()
+        
+        cached_resp = await cache_service.get("chat", f"session:{session_id}", query_hash)
+        if cached_resp:
+            logger.info(f"[Chat] Cache HIT for query in session={session_id}")
+            assistant_msg = MessageModel(
+                id=f"msg-{uuid.uuid4()}",
+                session_id=session_id,
+                role="assistant",
+                content=cached_resp["content"],
+                citations_json=cached_resp.get("citations")
+            )
+            await self.message_repo.create(assistant_msg)
+            await self.session_repo.db.flush()
+            return assistant_msg
+
         # Retrieve session to find linked documents
         session = await self.session_repo.get(session_id)
         document_ids = session.document_ids if session else []
@@ -103,6 +122,18 @@ class ChatService:
         )
         await self.message_repo.create(assistant_msg)
         await self.session_repo.db.flush()
+
+        # Cache final assistant response
+        await cache_service.set(
+            "chat",
+            f"session:{session_id}",
+            query_hash,
+            {
+                "content": full_content,
+                "citations": citations
+            },
+            ttl_seconds=1800  # 30 mins TTL
+        )
 
         return assistant_msg
 

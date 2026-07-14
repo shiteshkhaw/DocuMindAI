@@ -58,6 +58,33 @@ class Settings(BaseSettings):
     CHROMA_TENANT: str | None = None
     CHROMA_DATABASE: str | None = None
 
+    # ── Upstash Redis ─────────────────────────────────────────────────────
+    UPSTASH_REDIS_URL: str | None = None
+    UPSTASH_REDIS_REST_TOKEN: str | None = None
+
+    # ── Supabase Storage ──────────────────────────────────────────────────
+    SUPABASE_URL: str | None = None
+    SUPABASE_ANON_KEY: str | None = None
+    SUPABASE_SERVICE_ROLE_KEY: str | None = None
+    SUPABASE_STORAGE_BUCKET: str = "documind-vault"
+
+    # ── Sentry Monitoring ─────────────────────────────────────────────────
+    SENTRY_DSN: str | None = None
+    SENTRY_ENVIRONMENT: str = "development"
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+    SENTRY_PROFILES_SAMPLE_RATE: float = 0.1
+
+    # ── Resend Email ──────────────────────────────────────────────────────
+    RESEND_API_KEY: str | None = None
+    EMAIL_FROM: str = "DocuMind AI <noreply@documind.ai>"
+
+    # ── Dramatiq Workers ──────────────────────────────────────────────────
+    DRAMATIQ_BROKER_URL: str | None = None
+
+    @property
+    def effective_broker_url(self) -> str | None:
+        return self.DRAMATIQ_BROKER_URL or self.UPSTASH_REDIS_URL
+
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",

@@ -12,6 +12,14 @@ os.environ["CHROMA_SERVER_HOST"] = ""
 os.environ["CHROMA_PERSIST_DIRECTORY"] = ""
 os.environ["CHROMA_API_KEY"] = ""
 
+# Ensure storage provider uses LocalStorageProvider during tests
+os.environ["SUPABASE_URL"] = ""
+os.environ["SUPABASE_SERVICE_ROLE_KEY"] = ""
+
+# Ensure dramatiq uses StubBroker (in-memory) during tests
+os.environ["UPSTASH_REDIS_URL"] = ""
+os.environ["DRAMATIQ_BROKER_URL"] = ""
+
 
 @pytest_asyncio.fixture
 async def test_db() -> AsyncGenerator[AsyncSession, None]:

@@ -22,3 +22,36 @@ services:
       - DATABASE_URL=postgresql+asyncpg://neondb_owner:password@c-2.ap-southeast-1.aws.neon.tech/neondb
       - CORS_ORIGINS=["http://localhost:3000", "http://127.0.0.1:3000"]
       - MAX_FILE_SIZE_MB=10
+      - UPSTASH_REDIS_URL=redis://redis:6379/0
+      - SUPABASE_URL
+      - SUPABASE_ANON_KEY
+      - SUPABASE_SERVICE_ROLE_KEY
+      - SUPABASE_STORAGE_BUCKET
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://neondb_owner:password@c-2.ap-southeast-1.aws.neon.tech/neondb
+      - UPSTASH_REDIS_URL=redis://redis:6379/0
+      - EMBEDDING_PROVIDER=openai
+      - VECTOR_STORE_PROVIDER=chroma
+      - SUPABASE_URL
+      - SUPABASE_ANON_KEY
+      - SUPABASE_SERVICE_ROLE_KEY
+      - SUPABASE_STORAGE_BUCKET
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

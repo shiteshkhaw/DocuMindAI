@@ -57,6 +57,14 @@ class TrustScoreV2Service:
         Confidence score is derived from evidence quality, not a magic number.
         """
         logger.info(f"[TrustScoreService] Computing trust score for doc={document_id}")
+        
+        # Check cache (Section 7 Requirements)
+        from services.cache import cache_service
+        cached_score = await cache_service.get("trust_score", "document", document_id)
+        if cached_score:
+            logger.info(f"[TrustScoreService] Cache HIT in Redis for doc={document_id}")
+            return cached_score
+
         deductions: List[Dict[str, Any]] = []
 
         # ── 1. Contradiction Health (35%) ─────────────────────────────────────
@@ -227,7 +235,7 @@ class TrustScoreV2Service:
             f"Total deductions: {len(deductions)}."
         )
 
-        return {
+        result = {
             "score": final_score,
             "confidence": confidence,
             "breakdown": {
@@ -241,3 +249,11 @@ class TrustScoreV2Service:
             "deductions": deductions,
             "evidence": evidence_text
         }
+
+        try:
+            from services.cache import cache_service
+            await cache_service.set("trust_score", "document", document_id, result, ttl_seconds=3600)
+        except Exception as exc:
+            logger.warning(f"[TrustScoreService] Cache set failed for doc={document_id}: {exc}")
+
+        return result

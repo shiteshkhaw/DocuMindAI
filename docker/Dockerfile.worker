@@ -1,0 +1,45 @@
+# Stage 1: Build stage
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+
+# Install compilation dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY apps/api/requirements.txt ./
+
+# Install python dependencies to the user directory to keep runner clean
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Stage 2: Runtime stage
+FROM python:3.13-slim AS runner
+
+# Setup env variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/home/documind/.local/bin:$PATH"
+
+WORKDIR /app
+
+# Install postgres client runtime dependency
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-privileged system user and group
+RUN groupadd --system --gid 10001 documind && \
+    useradd --system --uid 10001 --gid 10001 --create-home documind
+
+# Copy dependencies and application files with proper ownership
+COPY --from=builder --chown=documind:documind /root/.local /home/documind/.local
+COPY --chown=documind:documind apps/api/ ./
+
+# Switch execution context to the non-root user
+USER documind
+
+# Run dramatiq worker process. 
+# Loads the "workers" package which initializes the broker and registers all actor task handlers.
+CMD ["dramatiq", "workers"]

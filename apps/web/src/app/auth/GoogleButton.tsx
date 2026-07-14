@@ -13,7 +13,13 @@ interface GoogleButtonProps {
   text?: string;
 }
 
-export function GoogleButton({ onSuccess, onError, isLoading, setIsLoading, text = "Continue with Google" }: GoogleButtonProps) {
+export function GoogleButton({
+  onSuccess,
+  onError,
+  isLoading,
+  setIsLoading,
+  text = "Continue with Google",
+}: GoogleButtonProps) {
   const login = useGoogleLogin({
     onSuccess: (codeResponse) => {
       onSuccess(codeResponse.access_token);

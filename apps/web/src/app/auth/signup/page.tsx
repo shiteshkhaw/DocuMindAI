@@ -25,7 +25,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
@@ -36,7 +36,9 @@ export default function SignupPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary relative z-10" />
           <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
         </div>
-        <p className="mt-4 text-sm text-muted-foreground font-medium animate-pulse">Entering Workspace...</p>
+        <p className="mt-4 text-sm text-muted-foreground font-medium animate-pulse">
+          Entering Workspace...
+        </p>
       </div>
     );
   }
@@ -46,9 +48,9 @@ export default function SignupPage() {
     setError(null);
     try {
       const res = await sdk.googleLogin(token);
-      const user = res.user || await sdk.getMe();
+      const user = res.user || (await sdk.getMe());
       setAuth(user, res.access_token);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to authenticate with Google");
       setGoogleLoading(false);
@@ -67,10 +69,10 @@ export default function SignupPage() {
         setAuth(res, res.access_token);
       } else {
         const loginRes = await sdk.login(email, password);
-        const user = loginRes.user || await sdk.getMe();
+        const user = loginRes.user || (await sdk.getMe());
         setAuth(user, loginRes.access_token);
       }
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to create account");
       setLoading(false);
@@ -81,12 +83,14 @@ export default function SignupPage() {
     <AuthLayout>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground">Create Workspace</h2>
-        <p className="text-sm text-muted-foreground mt-1">Join the next generation of document intelligence</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Join the next generation of document intelligence
+        </p>
       </div>
 
       {error && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }} 
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl text-center"
         >
@@ -94,23 +98,27 @@ export default function SignupPage() {
         </motion.div>
       )}
 
-      <GoogleButton 
-        onSuccess={handleGoogleSuccess} 
-        onError={setError} 
-        isLoading={googleLoading} 
+      <GoogleButton
+        onSuccess={handleGoogleSuccess}
+        onError={setError}
+        isLoading={googleLoading}
         setIsLoading={setGoogleLoading}
         text="Sign up with Google"
       />
 
       <div className="my-6 flex items-center">
         <div className="flex-1 border-t border-border/50"></div>
-        <span className="px-3 text-xs text-muted-foreground uppercase tracking-wider font-semibold">Or</span>
+        <span className="px-3 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+          Or
+        </span>
         <div className="flex-1 border-t border-border/50"></div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5 group">
-          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">Full Name</label>
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">
+            Full Name
+          </label>
           <Input
             type="text"
             placeholder="Jane Doe"
@@ -121,7 +129,9 @@ export default function SignupPage() {
           />
         </div>
         <div className="space-y-1.5 group">
-          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">Work Email</label>
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">
+            Work Email
+          </label>
           <Input
             type="email"
             placeholder="name@company.com"
@@ -132,7 +142,9 @@ export default function SignupPage() {
           />
         </div>
         <div className="space-y-1.5 group">
-          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">Password</label>
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">
+            Password
+          </label>
           <Input
             type="password"
             placeholder="••••••••"
@@ -151,7 +163,9 @@ export default function SignupPage() {
           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
           <span className="relative z-10 flex items-center gap-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
-            {!loading && <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
+            {!loading && (
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            )}
           </span>
         </Button>
       </form>

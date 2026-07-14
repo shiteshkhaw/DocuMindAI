@@ -12,6 +12,10 @@ logger = logging.getLogger("documind.startup")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ── Sentry initialization ────────────────────────────────────────────
+    from core import init_sentry
+    init_sentry()
+
     # ── DB: auto-create tables and migrate columns ───────────────────────
     async with engine.begin() as conn:
         from models.auth import UserModel, SessionModel
@@ -79,6 +83,17 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(run_migrations)
     logger.info("[Startup] Database tables verified / created / migrated.")
 
+    # ── Redis: connect and validate ──────────────────────────────────────
+    from core.redis import redis_manager
+    await redis_manager.connect()
+    redis_health = await redis_manager.health_check()
+    if redis_health.get("status") == "connected":
+        logger.info(f"[Startup] Redis OK | version={redis_health.get('version')}")
+    elif redis_health.get("status") == "not_configured":
+        logger.info("[Startup] Redis not configured — running without Redis.")
+    else:
+        logger.warning(f"[Startup] Redis DEGRADED | {redis_health.get('error', 'unknown')}")
+
     # ── Chroma: startup health check ─────────────────────────────────────
     try:
         from services.dependencies import get_vector_store
@@ -101,7 +116,21 @@ async def lifespan(app: FastAPI):
             f"[Startup] ChromaDB health check failed on startup: {e}"
         )
 
+    # ── Storage: validate and create bucket ──────────────────────────────
+    try:
+        from storage import get_storage_provider
+        storage_service = get_storage_provider()
+        provider = storage_service.provider
+        if hasattr(provider, "initialize"):
+            await provider.initialize()
+    except Exception as e:
+        logger.error(f"[Startup] Storage initialization/validation failed: {e}")
+
     yield
+
+    # ── Shutdown: Redis disconnect ────────────────────────────────────────
+    from core.redis import redis_manager as _redis_mgr
+    await _redis_mgr.disconnect()
     logger.info("[Shutdown] DocuMind AI shutting down.")
 
 

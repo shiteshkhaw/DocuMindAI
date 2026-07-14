@@ -81,7 +81,7 @@ const config: Config = {
         cinematic: "650ms",
       },
       animation: {
-        "shimmer": "shimmer 2s infinite linear",
+        shimmer: "shimmer 2s infinite linear",
         "pulse-subtle": "pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "fade-in-up": "fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
       },
@@ -105,4 +105,3 @@ const config: Config = {
 };
 
 export default config;
-

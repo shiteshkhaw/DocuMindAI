@@ -83,11 +83,16 @@ const ParticleSystem = () => {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none opacity-40 dark:opacity-60" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 z-0 pointer-events-none opacity-40 dark:opacity-60"
+    />
+  );
 };
 
 const TrustIndicators = () => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.6, duration: 0.8 }}
@@ -124,21 +129,27 @@ const MetricsCounter = () => {
   }, []);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 1, duration: 1 }}
       className="mt-16 pt-8 border-t border-border/30"
     >
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Why organizations trust DocuMind</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+        Why organizations trust DocuMind
+      </p>
       <div className="flex gap-8">
         <div>
           <div className="text-2xl font-bold text-foreground">{docs.toLocaleString()}+</div>
-          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Documents Analyzed</div>
+          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Documents Analyzed
+          </div>
         </div>
         <div>
           <div className="text-2xl font-bold text-foreground">{contras.toLocaleString()}+</div>
-          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Contradictions Detected</div>
+          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Contradictions Detected
+          </div>
         </div>
       </div>
     </motion.div>
@@ -156,7 +167,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <div 
+    <div
       onMouseMove={handleMouseMove}
       className="min-h-screen w-full flex bg-background relative overflow-hidden select-none"
     >
@@ -167,7 +178,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             scale: [1, 1.1, 1],
             opacity: [0.3, 0.5, 0.3],
             x: [0, 50, 0],
-            y: [0, -50, 0]
+            y: [0, -50, 0],
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           className="absolute -top-[20%] -right-[10%] w-[70vw] h-[70vw] rounded-full bg-indigo-500/10 blur-[120px] dark:bg-indigo-500/5 mix-blend-screen"
@@ -177,7 +188,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             scale: [1, 1.2, 1],
             opacity: [0.2, 0.4, 0.2],
             x: [0, -30, 0],
-            y: [0, 50, 0]
+            y: [0, 50, 0],
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           className="absolute -bottom-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full bg-violet-500/10 blur-[120px] dark:bg-violet-500/5 mix-blend-screen"
@@ -185,7 +196,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <motion.div
           animate={{
             scale: [1, 1.15, 1],
-            opacity: [0.2, 0.3, 0.2]
+            opacity: [0.2, 0.3, 0.2],
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] rounded-full bg-blue-500/10 blur-[100px] dark:bg-blue-500/5 mix-blend-screen"
@@ -202,20 +213,23 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <motion.div 
+            <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="flex h-16 w-16 items-center justify-center rounded-2xl bg-transparent overflow-hidden shadow-lg shadow-primary/10 mb-8 border border-border/50"
             >
-              <Image src={logoImg} alt="DocuMind AI Logo" className="h-full w-full object-cover mix-blend-multiply" priority />
+              <Image
+                src={logoImg}
+                alt="DocuMind AI Logo"
+                className="h-full w-full object-cover mix-blend-multiply"
+                priority
+              />
             </motion.div>
-            
+
             <h1 className="text-4xl xl:text-5xl font-bold text-foreground tracking-tight leading-tight mb-4">
-              Your Intelligence <br/> Workspace
+              Your Intelligence <br /> Workspace
             </h1>
-            <p className="text-xl text-muted-foreground font-medium">
-              Analyze. Verify. Trust.
-            </p>
+            <p className="text-xl text-muted-foreground font-medium">Analyze. Verify. Trust.</p>
 
             <TrustIndicators />
             <MetricsCounter />
@@ -228,7 +242,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             style={{
               rotateX: mousePos.y * -0.5,
               rotateY: mousePos.x * 0.5,
-              transformPerspective: 1000
+              transformPerspective: 1000,
             }}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -237,10 +251,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           >
             {/* Inner dynamic glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-            
-            <div className="relative z-10">
-              {children}
-            </div>
+
+            <div className="relative z-10">{children}</div>
           </motion.div>
         </div>
       </div>

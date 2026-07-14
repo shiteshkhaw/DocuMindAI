@@ -17,12 +17,12 @@ export const Panel = React.forwardRef<HTMLDivElement, PanelProps>(
             "bg-background border border-border shadow-xs": variant === "bordered",
             "bg-card border border-card-border shadow-sm hover:shadow-md": variant === "raised",
           },
-          className
+          className,
         )}
         {...props}
       />
     );
-  }
+  },
 );
 
 Panel.displayName = "Panel";

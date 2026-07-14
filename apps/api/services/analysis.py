@@ -21,6 +21,28 @@ class AnalysisService:
         self.doc_repo = DocumentRepository(db)
 
     async def get_or_create_analysis(self, document_id: str) -> DocumentAnalysisModel:
+        # 1. Check Redis Cache first (Section 7 Requirements)
+        from services.cache import cache_service
+        cached_data = await cache_service.get("analysis", "document", document_id)
+        if cached_data:
+            logger.info(f"[Analysis] Cache HIT in Redis for doc={document_id}")
+            return DocumentAnalysisModel(
+                id=cached_data["id"],
+                document_id=cached_data["document_id"],
+                summary_json=cached_data["summary_json"],
+                entities_json=cached_data["entities_json"],
+                kv_pairs_json=cached_data["kv_pairs_json"],
+                entity_conflicts_json=cached_data.get("entity_conflicts_json"),
+                facts_json=cached_data.get("facts_json"),
+                semantic_conflicts_json=cached_data.get("semantic_conflicts_json"),
+                ambiguities_json=cached_data.get("ambiguities_json"),
+                references_json=cached_data.get("references_json"),
+                requirements_json=cached_data.get("requirements_json"),
+                trust_score_json=cached_data.get("trust_score_json"),
+                executive_summary_json=cached_data.get("executive_summary_json"),
+                review_json=cached_data.get("review_json")
+            )
+
         if document_id not in _analysis_locks:
             # Evict oldest entry if we hit the cap
             if len(_analysis_locks) >= _MAX_LOCKS:
@@ -32,7 +54,9 @@ class AnalysisService:
             # Double-check under lock in case another coroutine just created it
             analysis = await self.repo.get_by_document_id(document_id)
             if analysis:
-                logger.info(f"[Analysis] Returning cached analysis for doc={document_id}")
+                logger.info(f"[Analysis] Returning cached analysis from DB for doc={document_id}")
+                # Save to cache for subsequent requests
+                await self._write_to_redis_cache(analysis)
                 return analysis
 
             # Load document name
@@ -287,13 +311,45 @@ class AnalysisService:
         )
 
         try:
-            return await self.repo.create(new_analysis)
+            saved_analysis = await self.repo.create(new_analysis)
+            await self._write_to_redis_cache(saved_analysis)
+            return saved_analysis
         except Exception as e:
             logger.error(f"[Analysis] DB save failed for doc={document_id}, trying to fetch existing: {e}")
             existing = await self.repo.get_by_document_id(document_id)
             if existing:
+                await self._write_to_redis_cache(existing)
                 return existing
             raise e
+
+    async def _write_to_redis_cache(self, analysis: DocumentAnalysisModel) -> None:
+        """Helper to write database analysis model data to Redis cache."""
+        try:
+            from services.cache import cache_service
+            await cache_service.set(
+                "analysis",
+                "document",
+                analysis.document_id,
+                {
+                    "id": analysis.id,
+                    "document_id": analysis.document_id,
+                    "summary_json": analysis.summary_json,
+                    "entities_json": analysis.entities_json,
+                    "kv_pairs_json": analysis.kv_pairs_json,
+                    "entity_conflicts_json": analysis.entity_conflicts_json,
+                    "facts_json": analysis.facts_json,
+                    "semantic_conflicts_json": analysis.semantic_conflicts_json,
+                    "ambiguities_json": analysis.ambiguities_json,
+                    "references_json": analysis.references_json,
+                    "requirements_json": analysis.requirements_json,
+                    "trust_score_json": analysis.trust_score_json,
+                    "executive_summary_json": analysis.executive_summary_json,
+                    "review_json": analysis.review_json
+                },
+                ttl_seconds=3600
+            )
+        except Exception as exc:
+            logger.warning(f"[Analysis] Cache set failed for doc={analysis.document_id}: {exc}")
 
     async def _fetch_document_chunks(
         self, document_id: str

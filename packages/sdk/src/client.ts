@@ -94,7 +94,11 @@ export class DocuMindSDK {
     return this.request<Workspace[]>("/api/v1/workspaces");
   }
 
-  async createWorkspace(name: string, description?: string, organizationId?: string): Promise<Workspace> {
+  async createWorkspace(
+    name: string,
+    description?: string,
+    organizationId?: string,
+  ): Promise<Workspace> {
     return this.request<Workspace>("/api/v1/workspaces", {
       method: "POST",
       body: JSON.stringify({ name, description, organization_id: organizationId }),
@@ -167,7 +171,9 @@ export class DocuMindSDK {
 
   async getContradictions(documentId: string, model?: string): Promise<ContradictionInsight[]> {
     const queryParams = model ? `?model=${model}` : "";
-    return this.request<ContradictionInsight[]>(`/api/v1/documents/${documentId}/contradictions${queryParams}`);
+    return this.request<ContradictionInsight[]>(
+      `/api/v1/documents/${documentId}/contradictions${queryParams}`,
+    );
   }
 
   async getHealth(): Promise<HealthStatus> {
@@ -175,30 +181,39 @@ export class DocuMindSDK {
   }
 
   // Phase 3.6 Testing Lab
-  async generateTestDataset(level: "easy" | "medium" | "hard" | "nightmare", workspaceId?: string): Promise<Document[]> {
+  async generateTestDataset(
+    level: "easy" | "medium" | "hard" | "nightmare",
+    workspaceId?: string,
+  ): Promise<Document[]> {
     const query = workspaceId ? `?level=${level}&workspace_id=${workspaceId}` : `?level=${level}`;
     return this.request<Document[]>(`/api/v1/testing/generate${query}`, {
-      method: "POST"
+      method: "POST",
     });
   }
 
   async runValidationSuite(): Promise<any> {
     return this.request<any>("/api/v1/testing/run-suite", {
-      method: "POST"
+      method: "POST",
     });
   }
 
-  async *streamContradictions(documentId: string, model?: string): AsyncGenerator<any, void, unknown> {
+  async *streamContradictions(
+    documentId: string,
+    model?: string,
+  ): AsyncGenerator<any, void, unknown> {
     const queryParams = model ? `?model=${model}` : "";
     const headers: Record<string, string> = {};
     if (this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}/api/v1/documents/${documentId}/contradictions/stream${queryParams}`, {
-      method: "GET",
-      headers,
-    });
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/documents/${documentId}/contradictions/stream${queryParams}`,
+      {
+        method: "GET",
+        headers,
+      },
+    );
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => response.statusText);
@@ -349,7 +364,11 @@ export class DocuMindSDK {
     return this.request<any[]>(`/api/v1/organizations/${orgId}/members`);
   }
 
-  async addOrganizationMember(orgId: string, userId: string, role: string = "member"): Promise<any> {
+  async addOrganizationMember(
+    orgId: string,
+    userId: string,
+    role: string = "member",
+  ): Promise<any> {
     return this.request<any>(`/api/v1/organizations/${orgId}/members`, {
       method: "POST",
       body: JSON.stringify({ user_id: userId, role }),

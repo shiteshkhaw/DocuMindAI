@@ -262,6 +262,13 @@ class AuthService:
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
             
+        # Stateful session check: verify the token is registered and has not been revoked (logout)
+        session_query = select(SessionModel).where(SessionModel.access_token == token)
+        session_result = await self.db.execute(session_query)
+        active_session = session_result.scalar_one_or_none()
+        if not active_session:
+            raise HTTPException(status_code=401, detail="Session is invalid or has been logged out")
+            
         query = select(UserModel).where(UserModel.id == user_id)
         result = await self.db.execute(query)
         user = result.scalar_one_or_none()

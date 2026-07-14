@@ -1,0 +1,57 @@
+
+# Agreement — Sales Team Headcount
+
+## Section 1: Personnel
+
+There are a total of 5 employees in the sales team.
+The sales team reports to John Doe, who is the CEO of Acme Corp.
+
+## Section 2: Revised Headcount
+
+Upon internal review, the headcount was corrected.
+There are a total of 4 employees in the sales team.
+This discrepancy must be resolved before the annual report submission.
+
+## Section 3: Requirements
+
+REQ-001: The system shall be fast and respond within 200ms.
+REQ-002: The system must be secure and shall encrypt all data at rest.
+REQ-003: All reports must be submitted by 2024-03-31.
+
+# Agreement — Sales Team Headcount
+
+## Section 1: Personnel
+
+There are a total of 5 employees in the sales team.
+The sales team reports to John Doe, who is the CEO of Acme Corp.
+
+## Section 2: Revised Headcount
+
+Upon internal review, the headcount was corrected.
+There are a total of 4 employees in the sales team.
+This discrepancy must be resolved before the annual report submission.
+
+## Section 3: Requirements
+
+REQ-001: The system shall be fast and respond within 200ms.
+REQ-002: The system must be secure and shall encrypt all data at rest.
+REQ-003: All reports must be submitted by 2024-03-31.
+
+# Agreement — Sales Team Headcount
+
+## Section 1: Personnel
+
+There are a total of 5 employees in the sales team.
+The sales team reports to John Doe, who is the CEO of Acme Corp.
+
+## Section 2: Revised Headcount
+
+Upon internal review, the headcount was corrected.
+There are a total of 4 employees in the sales team.
+This discrepancy must be resolved before the annual report submission.
+
+## Section 3: Requirements
+
+REQ-001: The system shall be fast and respond within 200ms.
+REQ-002: The system must be secure and shall encrypt all data at rest.
+REQ-003: All reports must be submitted by 2024-03-31.

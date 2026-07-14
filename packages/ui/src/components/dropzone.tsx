@@ -13,7 +13,11 @@ export interface DropzoneProps {
 export const Dropzone: React.FC<DropzoneProps> = ({
   onFileSelect,
   maxSize = 10 * 1024 * 1024,
-  accept = ["application/pdf", "text/plain", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  accept = [
+    "application/pdf",
+    "text/plain",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
   disabled = false,
   className,
 }) => {
@@ -38,7 +42,9 @@ export const Dropzone: React.FC<DropzoneProps> = ({
 
     for (const file of files) {
       if (file.size > maxSize) {
-        setError(`File ${file.name} exceeds the max size limit of ${(maxSize / (1024 * 1024)).toFixed(0)}MB.`);
+        setError(
+          `File ${file.name} exceeds the max size limit of ${(maxSize / (1024 * 1024)).toFixed(0)}MB.`,
+        );
         continue;
       }
       if (accept.length > 0 && !accept.includes(file.type) && !file.name.endsWith(".docx")) {
@@ -95,7 +101,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           {
             "border-violet-500 bg-violet-950/10 scale-[1.01]": isDragActive,
             "opacity-50 pointer-events-none": disabled,
-          }
+          },
         )}
       >
         <input
@@ -112,9 +118,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           <Upload className="h-6 w-6 text-zinc-300" />
         </div>
 
-        <h3 className="text-base font-semibold text-zinc-200 mb-1">
-          Drag & drop your files here
-        </h3>
+        <h3 className="text-base font-semibold text-zinc-200 mb-1">Drag & drop your files here</h3>
         <p className="text-xs text-zinc-500 max-w-xs mb-3">
           Support for PDF, Word (.docx), or plain text files up to 10MB
         </p>

@@ -25,7 +25,7 @@ export default function LoginPage() {
   // Smart Auth Flow: Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
@@ -36,7 +36,9 @@ export default function LoginPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary relative z-10" />
           <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
         </div>
-        <p className="mt-4 text-sm text-muted-foreground font-medium animate-pulse">Entering Workspace...</p>
+        <p className="mt-4 text-sm text-muted-foreground font-medium animate-pulse">
+          Entering Workspace...
+        </p>
       </div>
     );
   }
@@ -46,9 +48,9 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await sdk.googleLogin(token);
-      const user = res.user || await sdk.getMe();
+      const user = res.user || (await sdk.getMe());
       setAuth(user, res.access_token);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to authenticate with Google");
       setGoogleLoading(false);
@@ -63,9 +65,9 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await sdk.login(email, password);
-      const user = res.user || await sdk.getMe();
+      const user = res.user || (await sdk.getMe());
       setAuth(user, res.access_token);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
       setLoading(false);
@@ -76,12 +78,14 @@ export default function LoginPage() {
     <AuthLayout>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
-        <p className="text-sm text-muted-foreground mt-1">Sign in to access your intelligence workspace</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Sign in to access your intelligence workspace
+        </p>
       </div>
 
       {error && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }} 
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl text-center"
         >
@@ -89,22 +93,26 @@ export default function LoginPage() {
         </motion.div>
       )}
 
-      <GoogleButton 
-        onSuccess={handleGoogleSuccess} 
-        onError={setError} 
-        isLoading={googleLoading} 
-        setIsLoading={setGoogleLoading} 
+      <GoogleButton
+        onSuccess={handleGoogleSuccess}
+        onError={setError}
+        isLoading={googleLoading}
+        setIsLoading={setGoogleLoading}
       />
 
       <div className="my-6 flex items-center">
         <div className="flex-1 border-t border-border/50"></div>
-        <span className="px-3 text-xs text-muted-foreground uppercase tracking-wider font-semibold">Or</span>
+        <span className="px-3 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+          Or
+        </span>
         <div className="flex-1 border-t border-border/50"></div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5 group">
-          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">Email</label>
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">
+            Email
+          </label>
           <Input
             type="email"
             placeholder="name@company.com"
@@ -116,8 +124,12 @@ export default function LoginPage() {
         </div>
         <div className="space-y-1.5 group">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">Password</label>
-            <a href="#" className="text-xs text-primary hover:underline font-medium">Forgot password?</a>
+            <label className="text-xs font-semibold text-foreground uppercase tracking-wide group-focus-within:text-primary transition-colors">
+              Password
+            </label>
+            <a href="#" className="text-xs text-primary hover:underline font-medium">
+              Forgot password?
+            </a>
           </div>
           <Input
             type="password"
@@ -136,7 +148,9 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
           <span className="relative z-10 flex items-center gap-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
-            {!loading && <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />}
+            {!loading && (
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            )}
           </span>
         </Button>
       </form>

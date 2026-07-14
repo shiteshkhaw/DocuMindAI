@@ -24,18 +24,33 @@ class DocumentService:
         import hashlib
         checksum = hashlib.sha256(contents).hexdigest()
 
-        # Create model in queued status
         doc_id = f"doc-{uuid.uuid4()}"
+        filename = file.filename or "unknown"
+        content_type = file.content_type or "application/octet-stream"
+        storage_key = f"documents/{doc_id}/{filename}"
+
+        # Upload file using abstract storage provider
+        from storage import get_storage_provider
+        storage_provider = get_storage_provider()
+        storage_result = await storage_provider.upload_file(
+            key=storage_key,
+            data=contents,
+            content_type=content_type,
+            metadata={"user_id": user_id, "doc_id": doc_id}
+        )
+
+        # Create model in queued status
         doc_model = DocumentModel(
             id=doc_id,
-            name=file.filename or "unknown",
-            storage_url=f"s3://documind-vault/{doc_id}_{file.filename}",
+            name=filename,
+            storage_url=storage_result.storage_url,
             status=IngestionStatus.QUEUED.value,
             metadata_json={
-                "title": file.filename.split(".")[0] if file.filename else "document",
+                "title": filename.split(".")[0] if filename else "document",
                 "fileSize": file_size,
-                "mimeType": file.content_type or "application/octet-stream",
-                "checksum": checksum
+                "mimeType": content_type,
+                "checksum": checksum,
+                "storage_key": storage_key
             },
             user_id=user_id,
             workspace_id=workspace_id
@@ -44,19 +59,57 @@ class DocumentService:
         created_doc = await self.repo.create(doc_model)
         await self.repo.db.flush()
 
-        # Spawn asynchronous background task for ingestion pipeline
-        import asyncio
-        from orchestration.tasks import run_ingestion_task
-        asyncio.create_task(
-            run_ingestion_task(
-                document_id=doc_id,
-                file_content=contents,
-                filename=file.filename or "unknown",
-                mime_type=file.content_type
-            )
+        # Dispatch background ingestion task to Dramatiq queue broker passing storage_key
+        from workers import ingest_document_worker
+        ingest_document_worker.send(
+            document_id=doc_id,
+            storage_key=storage_key,
+            filename=filename,
+            mime_type=content_type,
+            user_id=user_id,
+            workspace_id=workspace_id,
         )
 
         return created_doc
 
     async def delete_document(self, id: str) -> bool:
+        doc = await self.repo.get(id)
+        if not doc:
+            return False
+
+        # Attempt to delete file from storage provider
+        storage_key = None
+        if isinstance(doc.metadata_json, dict):
+            storage_key = doc.metadata_json.get("storage_key")
+
+        if not storage_key and doc.storage_url:
+            # Fallback parsing in case storage_key is missing
+            # e.g., s3://documind-vault/doc-id_filename or http://.../documents/doc-id/filename
+            if "documents/" in doc.storage_url:
+                storage_key = "documents/" + doc.storage_url.split("documents/")[-1]
+            elif "documind-vault/" in doc.storage_url:
+                storage_key = doc.storage_url.split("documind-vault/")[-1]
+
+        if storage_key:
+            try:
+                from storage import get_storage_provider
+                storage_provider = get_storage_provider()
+                await storage_provider.safe_delete(storage_key)
+            except Exception as exc:
+                # Log but do not block DB deletion
+                import logging
+                logging.getLogger("documind.services.document").warning(
+                    f"Failed to delete storage file for key {storage_key}: {exc}"
+                )
+
+        # Invalidate Redis Analysis cache for document (Section 7 Requirements)
+        try:
+            from services.cache import cache_service
+            await cache_service.delete("analysis", "document", id)
+        except Exception as exc:
+            import logging
+            logging.getLogger("documind.services.document").warning(
+                f"Failed to invalidate analysis cache for doc={id}: {exc}"
+            )
+
         return await self.repo.delete(id)

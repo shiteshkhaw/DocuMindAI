@@ -1,8 +1,7 @@
 import * as React from "react";
 import { cn } from "../utils/cn.js";
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "glass";
   size?: "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
@@ -34,7 +33,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             "h-12 px-6 text-base rounded-md": size === "lg",
             "h-10 w-10 p-0 rounded-md": size === "icon",
           },
-          className
+          className,
         )}
         {...props}
       >

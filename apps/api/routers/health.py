@@ -32,6 +32,20 @@ async def health_check():
         result["status"] = "degraded"
         logger.warning(f"[Health] Postgres check failed: {e}")
 
+    # ── Redis ─────────────────────────────────────────────────────────────
+    try:
+        from core.redis import redis_manager
+        redis_health = await redis_manager.health_check()
+        result["redis"] = redis_health.get("status", "unknown")
+        if redis_health.get("version"):
+            result["redis_version"] = redis_health["version"]
+        if redis_health.get("status") == "disconnected":
+            result["status"] = "degraded"
+    except Exception as e:
+        result["redis"] = f"error: {str(e)}"
+        result["status"] = "degraded"
+        logger.warning(f"[Health] Redis check failed: {e}")
+
     # ── Chroma ────────────────────────────────────────────────────────────
     try:
         store = get_vector_store()

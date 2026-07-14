@@ -37,14 +37,10 @@ export const Modal: React.FC<ModalProps> = ({ children, isOpen: customIsOpen, on
       }
       onOpenChange?.(open);
     },
-    [isControlled, onOpenChange]
+    [isControlled, onOpenChange],
   );
 
-  return (
-    <ModalContext.Provider value={{ isOpen, setIsOpen }}>
-      {children}
-    </ModalContext.Provider>
-  );
+  return <ModalContext.Provider value={{ isOpen, setIsOpen }}>{children}</ModalContext.Provider>;
 };
 
 export interface ModalTriggerProps {
@@ -65,7 +61,7 @@ export const ModalTrigger = React.forwardRef<HTMLElement, ModalTriggerProps>(
         child.props.onClick?.(e);
       },
     });
-  }
+  },
 );
 ModalTrigger.displayName = "ModalTrigger";
 
@@ -139,7 +135,7 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className={cn(
                   "relative z-50 w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl focus:outline-none",
-                  className
+                  className,
                 )}
                 role="dialog"
                 aria-modal="true"
@@ -161,7 +157,7 @@ export const ModalContent = React.forwardRef<HTMLDivElement, ModalContentProps>(
         </AnimatePresence>
       </SafePortal>
     );
-  }
+  },
 );
 ModalContent.displayName = "ModalContent";
 
@@ -205,7 +201,10 @@ export const ModalFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   ...props
 }) => (
   <div
-    className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t border-border/40 pt-4 mt-6", className)}
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t border-border/40 pt-4 mt-6",
+      className,
+    )}
     {...props}
   />
 );

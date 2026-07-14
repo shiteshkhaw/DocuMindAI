@@ -71,6 +71,16 @@ async def upload_document(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
+    if workspace_id:
+        from services.organization import OrganizationService
+        org_service = OrganizationService(db)
+        role = await org_service.get_user_role_for_workspace(workspace_id, current_user.id)
+        if role is None or role == "viewer":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Workspace access denied or insufficient permissions."
+            )
+            
     service = DocumentService(db)
     try:
         d = await service.upload_document(file, user_id=current_user.id, workspace_id=workspace_id)
@@ -85,6 +95,8 @@ async def upload_document(
             userId=d.user_id,
             error=d.error
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

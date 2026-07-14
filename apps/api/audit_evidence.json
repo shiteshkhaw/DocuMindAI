@@ -253,50 +253,26 @@
     "entityConflicts": [
       {
         "entity_type": "active headcount",
-        "values": [
-          "5 members",
-          "4 members"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "values": ["5 members", "4 members"],
+        "pages": [1, 2],
         "description": "Conflicting 'is' for 'active headcount'. Page 1: \"The active headcount is 5 members.\" vs Page 2: \"The active headcount is 4 members.\""
       },
       {
         "entity_type": "project start date",
-        "values": [
-          "2023-01-01",
-          "2023-03-01"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "values": ["2023-01-01", "2023-03-01"],
+        "pages": [1, 2],
         "description": "Conflicting 'is' for 'project start date'. Page 1: \"The project start date is 2023-01-01.\" vs Page 2: \"The project start date is 2023-03-01.\""
       },
       {
         "entity_type": "total budget",
-        "values": [
-          "$1,000,000",
-          "$2,000,000"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "values": ["$1,000,000", "$2,000,000"],
+        "pages": [1, 2],
         "description": "Conflicting 'is' for 'total budget'. Page 1: \"The total budget is $1,000,000.\" vs Page 2: \"The total budget is $2,000,000.\""
       },
       {
         "entity_type": "primary contractor",
-        "values": [
-          "Microsoft",
-          "Google"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "values": ["Microsoft", "Google"],
+        "pages": [1, 2],
         "description": "Conflicting 'is' for 'primary contractor'. Page 1: \"The primary contractor is Microsoft.\" vs Page 2: \"The primary contractor is Google.\""
       }
     ],
@@ -428,14 +404,8 @@
         "entity_text": "active headcount",
         "entity_type": "ENTITY",
         "attribute": "attribute",
-        "conflicting_values": [
-          "5 members",
-          "4 members"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "conflicting_values": ["5 members", "4 members"],
+        "pages": [1, 2],
         "severity": "high",
         "description": "Conflicting 'is' for 'active headcount'. Page 1: \"The active headcount is 5 members.\" vs Page 2: \"The active headcount is 4 members.\"",
         "confidence": 0.95
@@ -444,14 +414,8 @@
         "entity_text": "project start date",
         "entity_type": "ENTITY",
         "attribute": "attribute",
-        "conflicting_values": [
-          "2023-01-01",
-          "2023-03-01"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "conflicting_values": ["2023-01-01", "2023-03-01"],
+        "pages": [1, 2],
         "severity": "high",
         "description": "Conflicting 'is' for 'project start date'. Page 1: \"The project start date is 2023-01-01.\" vs Page 2: \"The project start date is 2023-03-01.\"",
         "confidence": 0.95
@@ -460,14 +424,8 @@
         "entity_text": "total budget",
         "entity_type": "ENTITY",
         "attribute": "attribute",
-        "conflicting_values": [
-          "$1,000,000",
-          "$2,000,000"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "conflicting_values": ["$1,000,000", "$2,000,000"],
+        "pages": [1, 2],
         "severity": "high",
         "description": "Conflicting 'is' for 'total budget'. Page 1: \"The total budget is $1,000,000.\" vs Page 2: \"The total budget is $2,000,000.\"",
         "confidence": 0.95
@@ -476,14 +434,8 @@
         "entity_text": "primary contractor",
         "entity_type": "ENTITY",
         "attribute": "attribute",
-        "conflicting_values": [
-          "Microsoft",
-          "Google"
-        ],
-        "pages": [
-          1,
-          2
-        ],
+        "conflicting_values": ["Microsoft", "Google"],
+        "pages": [1, 2],
         "severity": "high",
         "description": "Conflicting 'is' for 'primary contractor'. Page 1: \"The primary contractor is Microsoft.\" vs Page 2: \"The primary contractor is Google.\"",
         "confidence": 0.95
@@ -706,25 +658,7 @@
   },
   "Vague Document Ambiguities Count": 0,
   "Concurrent Status Codes": [
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
-    200,
+    200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200,
     200
   ],
   "Concurrent Latency Seconds": 35.396945799991954

@@ -13,7 +13,20 @@ export interface Document {
   id: string;
   name: string;
   storageUrl: string;
-  status: "queued" | "UPLOADING" | "PARSING" | "CLEANING" | "CHUNKING" | "EMBEDDING" | "INDEXING" | "ANALYZING" | "COMPLETED" | "FAILED" | "processing" | "processed" | "failed";
+  status:
+    | "queued"
+    | "UPLOADING"
+    | "PARSING"
+    | "CLEANING"
+    | "CHUNKING"
+    | "EMBEDDING"
+    | "INDEXING"
+    | "ANALYZING"
+    | "COMPLETED"
+    | "FAILED"
+    | "processing"
+    | "processed"
+    | "failed";
   metadata: DocumentMetadata;
   createdAt: string;
   updatedAt: string;

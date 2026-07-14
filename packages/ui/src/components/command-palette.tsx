@@ -52,7 +52,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       (item) =>
         item.title.toLowerCase().includes(query) ||
         item.description?.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
+        item.category.toLowerCase().includes(query),
     );
   }, [items, search]);
 
@@ -88,14 +88,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) =>
-          filteredItems.length === 0 ? 0 : (prev + 1) % filteredItems.length
+          filteredItems.length === 0 ? 0 : (prev + 1) % filteredItems.length,
         );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((prev) =>
-          filteredItems.length === 0
-            ? 0
-            : (prev - 1 + filteredItems.length) % filteredItems.length
+          filteredItems.length === 0 ? 0 : (prev - 1 + filteredItems.length) % filteredItems.length,
         );
       } else if (e.key === "Enter") {
         e.preventDefault();
@@ -201,7 +199,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                                 "flex w-full items-center justify-between rounded-md px-3 py-2 text-xs text-left transition-all duration-150",
                                 isSelected
                                   ? "bg-accent text-accent-foreground shadow-xs"
-                                  : "text-foreground hover:bg-accent/40"
+                                  : "text-foreground hover:bg-accent/40",
                               )}
                               role="option"
                               aria-selected={isSelected}

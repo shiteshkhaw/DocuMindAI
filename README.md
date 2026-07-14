@@ -5,7 +5,7 @@ DocuMind AI is a state-of-the-art, production-ready document intelligence SaaS b
 ---
 
 ## 📌 Executive Summary
-DocuMind AI is designed to address the severe limitations of standard document retrieval and review systems. By combining high-performance asynchronous web APIs (FastAPI/SQLAlchemy 2.0) with modular frontends (Next.js App Router/Zustand), DocuMind AI delivers a secure, multi-tenant workspace experience. It acts as an automated auditor that performs deep factual extraction, identifies attribute-level inconsistencies across sections, detects broken requirement chains, flags vague phrasing, and computes an explainable quality index (Trust Score) for every document.
+DocuMind AI is designed to address the severe limitations of standard document retrieval and review systems. By combining high-performance asynchronous web APIs (FastAPI/SQLAlchemy 2.0) with modular frontends (Next.js 15 App Router/Zustand), DocuMind AI delivers a secure, multi-tenant workspace experience. It acts as an automated auditor that performs deep factual extraction, identifies attribute-level inconsistencies across sections, detects broken requirement chains, flags vague phrasing, and computes an explainable quality index (Trust Score) for every document.
 
 ---
 
@@ -253,7 +253,7 @@ sequenceDiagram
 ## 🛠️ Technology Stack
 
 ### Frontend Stack (Monorepo Workspace)
-* **Framework:** Next.js 15.2 (App Router)
+* **Framework:** Next.js 15.5 (App Router) with full Sentry Instrumentation hooks.
 * **Language:** TypeScript (Strict Mode)
 * **State Management:** Zustand 5.0 (Isolated client storage)
 * **Data Fetching:** TanStack React Query v5 (Server cache synchronization)
@@ -263,7 +263,7 @@ sequenceDiagram
 ### Backend Stack
 * **Web Framework:** FastAPI (ASGI async/await architecture)
 * **Database Driver:** SQLAlchemy 2.0 (Asynchronous transactions via `asyncpg`)
-* **Task Management:** Asyncio loop execution (built-in FastAPI background workers)
+* **Task Management:** Distributed queue workers (Dramatiq + Redis broker) + Asyncio loop execution
 * **Validation:** Pydantic v2 (Strict schema enforcement)
 * **Password Hashing:** Passlib (Bcrypt hashing context)
 * **Token Security:** PyJWT / Jose (JWT verification with RS256/HS256)
@@ -279,13 +279,15 @@ sequenceDiagram
 
 ## 🔒 Enterprise Security & Tenant Isolation
 DocuMind AI implements multi-tenant security layers across the database and application levels:
-1. **Workspace Guardrails:** Documents belong strictly to a `workspace_id`. Cross-workspace document retrieval is prevented via mandatory workspace verification.
-2. **Organization-Level RBAC:** Organization members are assigned fine-grained roles:
+1. **Workspace IDOR Isolation:** Documents belong strictly to a `workspace_id`. All upload mutations verify the active user has write permissions (`admin` or `member`) for the target workspace, explicitly rejecting unauthorized uploads.
+2. **Stateful Session Revocation:** Validates JWT claims statefully against the active `SessionModel` store in the database. Revoked or logged-out tokens immediately trigger a `401 Unauthorized` block.
+3. **Document Ownership Verification:** Restricts access to sensitive analytics (e.g. contradictions, facts, summaries) using explicit document ownership and workspace membership validation on the routers.
+4. **Organization-Level RBAC:** Members are assigned fine-grained roles:
    * **Admin:** Full read/write access. Can invite members, update roles, create/delete workspaces, and read workspace audit trails.
    * **Member:** Standard read/write access. Can upload documents and use workspaces, but cannot modify organization members or delete workspaces.
    * **Viewer:** Read-only access. Restricted from mutating state, deleting files, or editing settings.
-3. **Immutable Compliance Auditing:** Mutating endpoints write audit trails to `audit_logs` tracking user, workspace, organization, timestamp, specific action details, and client IP addresses.
-4. **Sliding-Window Rate Limiter:** Protects cloud compute endpoints. Standard endpoints are restricted to 100 requests/minute, while heavy LLM/vector routes are capped at 10 requests/minute to isolate noisy tenants.
+5. **Immutable Compliance Auditing:** Mutating endpoints write audit trails to `audit_logs` tracking user, workspace, organization, timestamp, specific action details, and client IP addresses.
+6. **Sliding-Window Rate Limiter:** Protects cloud compute endpoints. Uses Redis sorted sets (ZSETs) with unique member payloads to prevent collisions, rejecting requests cleanly without rate limit lock-in or blocking amplification.
 
 ---
 
@@ -315,7 +317,10 @@ DocuMind-AI/
 │       ├── public/                # Static assets (favicons, logos)
 │       └── src/
 │           ├── app/               # App Router pages (Dashboard client)
-│           └── store/             # Zustand states (Auth, Workspaces, Chat)
+│           ├── components/        # Frontend UI components
+│           ├── store/             # Zustand states (Auth, Workspaces, Chat)
+│           ├── instrumentation.ts # Sentry Next.js 15 Server-side hooks
+│           └── instrumentation-client.ts # Sentry Next.js 15 Client-side hooks
 ├── packages/
 │   ├── config/                    # Shared dev configurations
 │   ├── prompts/                   # Structured system instruction prompts
@@ -409,6 +414,19 @@ To run the commercial audit compliance test suite, which verifies document inges
 * **Connection Pool Configuration:** The async PostgreSQL connection pool is optimized for production-grade scale (`pool_size=10`, `max_overflow=20`, `pool_pre_ping=True`), minimizing neon socket bottlenecks.
 * **Concurrent Ingestion Isolation:** The document analysis pipeline is protected from race conditions by an in-memory lock dictionary (`asyncio.Lock()`) bounded to 500 active locks.
 * **Semantic Analysis Deduplication:** Logical and semantic conflicts are indexed and deduplicated via substring key signatures (`seen_summaries`) to prevent overloading the database save actions.
+* **Bounded Concurrency Semaphores:** LLM evaluation processes are throttled using `asyncio.Semaphore(3)` to prevent rate limit limits (429) on OpenRouter and OpenAI models under concurrent analysis loads.
+
+---
+
+## 🏛️ DevOps & Build Hardening
+
+### A. Non-Privileged Container Execution
+The final runtime stages of the backend API and worker Dockerfiles ([`docker/Dockerfile.api`](file:///c:/Users/khaws/Desktop/Interns/DocuMind%20AI/docker/Dockerfile.api) and [`docker/Dockerfile.worker`](file:///c:/Users/khaws/Desktop/Interns/DocuMind%20AI/docker/Dockerfile.worker)) run under a dedicated, unprivileged system user/group (`documind` with UID/GID 10001). This mitigates container-escape vulnerability vectors and enforces kernel-level security boundaries.
+
+### B. Multi-Stage Production Builds
+Docker builds use compilation cache layering:
+1. **`builder` Stage:** Installs compiler utilities (`build-essential`, `libpq-dev`) and installs packages locally to a user environment.
+2. **`runner` Stage:** Copies the pre-compiled packages, imports only the minimal runtime libraries (`libpq5`), sets up the paths, and switches directory ownership to the non-root user context.
 
 ---
 

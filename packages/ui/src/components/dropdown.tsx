@@ -88,7 +88,7 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
           ref.current = node;
         }
       },
-      [ref, triggerRef]
+      [ref, triggerRef],
     );
 
     const child = React.Children.only(children) as React.ReactElement<any>;
@@ -107,7 +107,7 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
       "aria-haspopup": "menu",
       "aria-expanded": isOpen,
     });
-  }
+  },
 );
 DropdownTrigger.displayName = "DropdownTrigger";
 
@@ -122,7 +122,10 @@ export const DropdownContent = React.forwardRef<HTMLDivElement, DropdownContentP
     return (
       <AnimatePresence>
         {isOpen && (
-          <div ref={contentRef} className={cn("absolute z-50", align === "right" ? "right-0" : "left-0")}>
+          <div
+            ref={contentRef}
+            className={cn("absolute z-50", align === "right" ? "right-0" : "left-0")}
+          >
             <motion.div
               ref={ref}
               initial={{ opacity: 0, scale: 0.95, y: -4 }}
@@ -132,7 +135,7 @@ export const DropdownContent = React.forwardRef<HTMLDivElement, DropdownContentP
               className={cn(
                 "mt-2 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg focus:outline-none ring-1 ring-black/5 origin-top-right",
                 align === "right" ? "right-0" : "left-0",
-                className
+                className,
               )}
               role="menu"
               aria-orientation="vertical"
@@ -144,7 +147,7 @@ export const DropdownContent = React.forwardRef<HTMLDivElement, DropdownContentP
         )}
       </AnimatePresence>
     );
-  }
+  },
 );
 DropdownContent.displayName = "DropdownContent";
 
@@ -169,15 +172,19 @@ export const DropdownItem = React.forwardRef<HTMLButtonElement, DropdownItemProp
         onClick={handleClick}
         className={cn(
           "flex w-full items-center rounded-sm px-3 py-2 text-xs text-left text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground outline-none transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
-          className
+          className,
         )}
         {...props}
       >
-        {icon && <span className="mr-2 h-3.5 w-3.5 flex items-center justify-center text-muted-foreground">{icon}</span>}
+        {icon && (
+          <span className="mr-2 h-3.5 w-3.5 flex items-center justify-center text-muted-foreground">
+            {icon}
+          </span>
+        )}
         {children}
       </button>
     );
-  }
+  },
 );
 DropdownItem.displayName = "DropdownItem";
 

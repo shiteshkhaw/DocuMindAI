@@ -5,11 +5,7 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "pulse" | "shimmer";
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({
-  className,
-  variant = "pulse",
-  ...props
-}) => {
+export const Skeleton: React.FC<SkeletonProps> = ({ className, variant = "pulse", ...props }) => {
   return (
     <div
       className={cn(
@@ -19,7 +15,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
           "relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-foreground/5 before:to-transparent":
             variant === "shimmer",
         },
-        className
+        className,
       )}
       {...props}
     />

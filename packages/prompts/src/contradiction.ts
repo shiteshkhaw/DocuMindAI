@@ -47,7 +47,9 @@ Output the same JSON schema as the standard contradiction engine.`;
 export const CONFLICTING_REQUIREMENT_SYSTEM = `You are a requirement compliance auditor. Focus specifically on product, technical, business, or operational requirements that conflict or specify impossible bounds (e.g. minimum memory requirements vs available space).
 Output the same JSON schema as the standard contradiction engine.`;
 
-export const getContradictionUserPrompt = (texts: { snippet: string; pageNumber: number }[]): string => {
+export const getContradictionUserPrompt = (
+  texts: { snippet: string; pageNumber: number }[],
+): string => {
   const formatted = texts
     .map((t, idx) => `[Segment ${idx + 1} (Page ${t.pageNumber})]\n"${t.snippet}"`)
     .join("\n\n");

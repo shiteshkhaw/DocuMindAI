@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { User } from '@documind/types';
-import { DocuMindSDK } from '@documind/sdk';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { User } from "@documind/types";
+import { DocuMindSDK } from "@documind/sdk";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const sdk = new DocuMindSDK({ baseUrl: apiBaseUrl });
@@ -43,10 +43,10 @@ export const useAuthStore = create<AuthState>()(
         } else {
           set({ isLoading: false });
         }
-      }
+      },
     }),
     {
-      name: 'documind-auth',
-    }
-  )
+      name: "documind-auth",
+    },
+  ),
 );

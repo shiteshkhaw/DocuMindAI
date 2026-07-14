@@ -59,6 +59,13 @@ class ExecutiveSummaryService:
         """
         logger.info(f"[ExecutiveSummary] Generating summary for doc={document_id}")
         
+        # Check cache (Section 7 Requirements)
+        from services.cache import cache_service
+        cached_summary = await cache_service.get("executive_summary", "document", document_id)
+        if cached_summary:
+            logger.info(f"[ExecutiveSummary] Cache HIT in Redis for doc={document_id}")
+            return cached_summary
+
         # Prepare structured findings as a clean context prompt
         findings_context = {
             "document_name": doc_name,
@@ -110,7 +117,13 @@ class ExecutiveSummaryService:
                     # Return a default fallback grounded in facts
                     return self._fallback_summary(findings_context)
 
-        return self._parse_summary(full_content, findings_context)
+        parsed_res = self._parse_summary(full_content, findings_context)
+        try:
+            from services.cache import cache_service
+            await cache_service.set("executive_summary", "document", document_id, parsed_res, ttl_seconds=3600)
+        except Exception as exc:
+            logger.warning(f"[ExecutiveSummary] Cache set failed for doc={document_id}: {exc}")
+        return parsed_res
 
     def _parse_summary(self, content: str, context: Dict[str, Any]) -> Dict[str, Any]:
         try:

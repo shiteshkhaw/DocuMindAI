@@ -179,21 +179,33 @@ async def generate_test_dataset(
 
 
 async def _ingest_test_doc_sync(db: AsyncSession, user_id: str, workspace_id: str, filename: str, content: str) -> str:
-    """Ingests document synchronously in the API thread using IngestionOrchestrator."""
+    """Ingests document synchronously in the API thread by utilizing the queue worker flow."""
     file_content = content.encode('utf-8')
     checksum = hashlib.sha256(file_content).hexdigest()
     doc_id = f"doc-{uuid.uuid4()}"
+    storage_key = f"documents/{doc_id}/{filename}"
     
+    # Upload file using abstract storage provider
+    from storage import get_storage_provider
+    storage_provider = get_storage_provider()
+    storage_result = await storage_provider.upload_file(
+        key=storage_key,
+        data=file_content,
+        content_type="text/plain",
+        metadata={"user_id": user_id, "doc_id": doc_id}
+    )
+
     doc_model = DocumentModel(
         id=doc_id,
         name=filename,
-        storage_url=f"s3://documind-vault/{doc_id}_{filename}",
+        storage_url=storage_result.storage_url,
         status=IngestionStatus.QUEUED.value,
         metadata_json={
             "title": filename.split(".")[0],
             "fileSize": len(file_content),
             "mimeType": "text/plain",
-            "checksum": checksum
+            "checksum": checksum,
+            "storage_key": storage_key
         },
         user_id=user_id,
         workspace_id=workspace_id
@@ -201,20 +213,39 @@ async def _ingest_test_doc_sync(db: AsyncSession, user_id: str, workspace_id: st
     
     db.add(doc_model)
     await db.commit()
-    await db.refresh(doc_model)
     
-    provider = get_embedding_provider()
-    store = get_vector_store()
-    orchestrator = IngestionOrchestrator(db=db, embedding_provider=provider, vector_store=store)
-    
-    await orchestrator.ingest_document(
-        document_id=doc_id,
-        file_content=file_content,
-        filename=filename,
-        mime_type="text/plain",
-        user_id=user_id,
-        workspace_id=workspace_id
-    )
+    from workers import ingest_document_worker, is_stub_broker
+    if is_stub_broker():
+        logger.info(f"[TestingSuite] running ingestion synchronously via stub broker for doc={doc_id}")
+        ingest_document_worker(
+            document_id=doc_id,
+            file_content=file_content,
+            filename=filename,
+            mime_type="text/plain",
+            user_id=user_id,
+            workspace_id=workspace_id
+        )
+    else:
+        logger.info(f"[TestingSuite] dispatching ingestion to Dramatiq queue for doc={doc_id}")
+        ingest_document_worker.send(
+            doc_id,
+            file_content,
+            filename,
+            "text/plain",
+            user_id,
+            workspace_id
+        )
+        
+        # Poll document status in the DB until processed
+        for _ in range(60):
+            await asyncio.sleep(1)
+            # Expire session cache to force fresh DB fetch
+            db.expire_all()
+            doc = await db.get(DocumentModel, doc_id)
+            if doc and doc.status in ("COMPLETED", "FAILED"):
+                logger.info(f"[TestingSuite] Ingestion complete in queue for doc={doc_id} with status={doc.status}")
+                break
+                
     return doc_id
 
 

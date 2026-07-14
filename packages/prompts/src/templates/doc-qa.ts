@@ -23,10 +23,7 @@ export const getDocumentQAUserPrompt = (
   chatHistory: { role: "user" | "assistant"; content: string }[],
 ): string => {
   const formattedContext = contexts
-    .map(
-      (ctx) =>
-        `[${ctx.documentName} (Page ${ctx.pageNumber})]\n"${ctx.snippet}"`,
-    )
+    .map((ctx) => `[${ctx.documentName} (Page ${ctx.pageNumber})]\n"${ctx.snippet}"`)
     .join("\n\n");
 
   const formattedHistory = chatHistory
