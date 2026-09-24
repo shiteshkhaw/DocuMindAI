@@ -35,3 +35,27 @@ async def test_workspace_crud(client: AsyncClient):
     # verify deleted (only default workspace remains)
     res = await client.get("/api/v1/workspaces", headers=headers)
     assert len(res.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_workspace_repository(test_db):
+    from repositories.workspace import WorkspaceRepository
+    from models.workspace import WorkspaceModel
+
+    repo = WorkspaceRepository(test_db)
+    ws = WorkspaceModel(
+        id="ws-repo-test",
+        user_id="usr-test-repo",
+        name="Repo Workspace",
+        description="Testing WorkspaceRepository",
+    )
+    await repo.create(ws)
+    await test_db.flush()
+
+    fetched = await repo.get("ws-repo-test")
+    assert fetched is not None
+    assert fetched.name == "Repo Workspace"
+
+    by_user = await repo.list_by_user("usr-test-repo")
+    assert len(by_user) == 1
+    assert by_user[0].id == "ws-repo-test"
