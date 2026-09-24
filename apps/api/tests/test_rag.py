@@ -1,5 +1,5 @@
 import pytest
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.document import DocumentModel
 from models.chat import ChatSessionModel
@@ -18,7 +18,10 @@ class DummyLLMProvider(BaseLLMProvider):
         self,
         messages: List[LLMMessage],
         model: str,
-        temperature: float = 0.2
+        temperature: float = 0.2,
+        max_tokens: int = 1000,
+        timeout: float = 30.0,
+        **kwargs: Any,
     ) -> AsyncGenerator[StreamingChunk, None]:
         yield StreamingChunk(token="According ", prompt_tokens=50, completion_tokens=1)
         yield StreamingChunk(token="to the provided contract, ", prompt_tokens=50, completion_tokens=5)
@@ -94,8 +97,8 @@ async def test_rag_orchestrator_execution(test_db: AsyncSession) -> None:
     # Assertions
     assert len(chunks) >= 3  # Citations + tokens + metrics
     
-    # Verify Citations chunk (usually index 0)
-    citations_chunk = chunks[0]
+    # Verify Citations chunk
+    citations_chunk = next(c for c in chunks if c["type"] == "citations")
     assert citations_chunk["type"] == "citations"
     assert len(citations_chunk["citations"]) > 0
     assert citations_chunk["citations"][0]["documentId"] == doc_id

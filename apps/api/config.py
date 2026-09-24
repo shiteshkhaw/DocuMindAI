@@ -98,7 +98,7 @@ class Settings(BaseSettings):
 
     # ── Dramatiq Workers ──────────────────────────────────────────────────
     DRAMATIQ_BROKER_URL: str | None = None
-    RUN_WORKERS_IN_PROCESS: bool = False
+    RUN_WORKERS_IN_PROCESS: bool = True
 
     @property
     def effective_broker_url(self) -> str | None:

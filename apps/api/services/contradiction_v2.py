@@ -299,8 +299,8 @@ class ContradictionEngine:
                 if len(conflicting) < 2:
                     continue
 
-                stmt_a = conflicting[0].get("text", "")
-                stmt_b = conflicting[1].get("text", "")
+                stmt_a = conflicting[0].get("text") or conflicting[0].get("quote") or conflicting[0].get("statement") or conflicting[0].get("claim") or ""
+                stmt_b = conflicting[1].get("text") or conflicting[1].get("quote") or conflicting[1].get("statement") or conflicting[1].get("claim") or ""
                 confidence = float(finding.get("confidence", 0.8))
                 strength = float(finding.get("contradiction_strength", 0.8))
 
@@ -338,18 +338,35 @@ class ContradictionEngine:
                 conflicting_resolved = []
 
                 for stmt in conflicting:
-                    text = stmt.get("text", "")
-                    page = stmt.get("page", 1)
+                    text = stmt.get("text") or stmt.get("quote") or stmt.get("statement") or stmt.get("claim") or stmt.get("snippet") or stmt.get("evidence") or ""
+                    page = stmt.get("page") or stmt.get("page_number") or stmt.get("pageNumber") or 1
 
-                    # Find best match in group
+                    # Find best match in group: first verbatim substring, then token overlap
                     best_idx = -1
-                    for idx in group:
-                        if text.lower().strip() in documents[idx].lower():
-                            best_idx = idx
-                            break
+                    text_lower = text.lower().strip()
+                    if text_lower:
+                        for idx in group:
+                            if text_lower in documents[idx].lower():
+                                best_idx = idx
+                                break
 
-                    page_resolved = metadatas[best_idx].get("page_number", page) if best_idx != -1 else page
-                    snippet_resolved = documents[best_idx] if best_idx != -1 else text
+                        if best_idx == -1:
+                            text_words = set(re.findall(r"\w+", text_lower))
+                            best_overlap = 0
+                            for idx in group:
+                                doc_words = set(re.findall(r"\w+", documents[idx].lower()))
+                                overlap = len(text_words & doc_words)
+                                if overlap > best_overlap:
+                                    best_overlap = overlap
+                                    best_idx = idx
+
+                    if best_idx != -1:
+                        meta_page = metadatas[best_idx].get("page_number") or metadatas[best_idx].get("page") or metadatas[best_idx].get("pageNumber")
+                        page_resolved = int(meta_page) if meta_page is not None else int(page)
+                        snippet_resolved = documents[best_idx]
+                    else:
+                        page_resolved = int(page)
+                        snippet_resolved = text
 
                     conflicting_resolved.append({
                         "text": text,
@@ -360,8 +377,8 @@ class ContradictionEngine:
                         "documentId": document_id,
                         "documentName": doc_name,
                         "pageNumber": page_resolved,
-                        "snippet": snippet_resolved[:400],
-                        "score": 1.0 if best_idx != -1 else 0.5,
+                        "snippet": snippet_resolved[:400] if snippet_resolved else text[:400],
+                        "score": 1.0 if best_idx != -1 else 0.8,
                     })
 
                 finding_id = f"contr-{uuid.uuid4()}"

@@ -12,6 +12,7 @@ interface AuthState {
   isLoading: boolean;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
+  isInitialized: boolean;
   initialize: () => Promise<void>;
 }
 
@@ -21,13 +22,14 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isLoading: true,
+      isInitialized: false,
       setAuth: (user, token) => {
         sdk.setToken(token);
-        set({ user, token });
+        set({ user, token, isInitialized: true, isLoading: false });
       },
       logout: () => {
         sdk.setToken("");
-        set({ user: null, token: null });
+        set({ user: null, token: null, isInitialized: true, isLoading: false });
 
         if (typeof window !== "undefined") {
           try {
@@ -57,6 +59,8 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       initialize: async () => {
+        if (get().isInitialized) return;
+        set({ isInitialized: true });
         const { token } = get();
         if (token) {
           sdk.setToken(token);

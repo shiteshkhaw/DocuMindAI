@@ -138,6 +138,32 @@ class RetrievalService:
             filter_meta=filter_meta or None,
         )
 
+        if not raw_results and document_ids:
+            logger.info(
+                f"[Retrieval] Vector similarity search returned 0 results for query '{query[:60]}'. "
+                f"Attempting direct chunk fallback for document_ids={document_ids}..."
+            )
+            raw_results = await self.vector_store.get_by_filter(
+                collection_name=self.collection_name,
+                filter_meta=filter_meta,
+                limit=fetch_limit,
+            )
+            # If still empty and filter_meta had additional constraints (user_id/workspace_id), retry with document_id only
+            if not raw_results and len(filter_meta) > 1:
+                doc_only_filter = (
+                    {"document_id": document_ids[0]}
+                    if len(document_ids) == 1
+                    else {"document_id": document_ids}
+                )
+                logger.info(
+                    f"[Retrieval] Fallback with filter_meta returned 0 results. Retrying with doc_only_filter={doc_only_filter}..."
+                )
+                raw_results = await self.vector_store.get_by_filter(
+                    collection_name=self.collection_name,
+                    filter_meta=doc_only_filter,
+                    limit=fetch_limit,
+                )
+
         if not raw_results:
             logger.warning(
                 f"[Retrieval] Zero raw results from Chroma for query='{query[:60]}'. "

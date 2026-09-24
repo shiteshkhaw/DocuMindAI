@@ -102,7 +102,7 @@ class DocumentAnalysisResponse(BaseModel):
     facts: list[FactSchema] = Field(default_factory=list)
     entityInconsistencies: list[EntityInconsistency] = Field(default_factory=list)
     semanticConflicts: list[SemanticConflictSchema] = Field(default_factory=list)
-    analyzedAt: datetime
+    analyzedAt: datetime | str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

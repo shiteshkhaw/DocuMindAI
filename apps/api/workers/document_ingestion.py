@@ -52,16 +52,16 @@ async def _run_async_ingestion(
                 workspace_id=workspace_id,
             )
 
-            # ── Trigger Analysis Pre-computation (Section 6 Requirements) ──────
+            # ── Trigger Analysis Pre-computation in Background ──────
             logger.info(f"[Worker] Ingestion complete. Pre-computing analysis for doc={document_id}")
             from services.analysis import AnalysisService
             from repositories.document import DocumentRepository
             
             doc_repo = DocumentRepository(db)
             doc_model = await doc_repo.get(document_id)
-            if doc_model:
-                doc_model.status = "ANALYZING"
-                doc_model.progress_percentage = 90
+            if doc_model and doc_model.status != "COMPLETED":
+                doc_model.status = "COMPLETED"
+                doc_model.progress_percentage = 100
                 await db.commit()
 
             analysis_result = None
@@ -71,20 +71,11 @@ async def _run_async_ingestion(
             except Exception as analysis_err:
                 logger.error(f"[Worker] Analysis failed for doc={document_id}: {analysis_err}", exc_info=True)
                 if doc_model:
-                    doc_model.status = "COMPLETED"
-                    doc_model.progress_percentage = 100
                     doc_model.error = f"Analysis warning: {str(analysis_err)}"
                     await db.commit()
-                return
-
-            # Ingestion completes and status transitions to COMPLETED
-            if doc_model:
-                doc_model.status = "COMPLETED"
-                doc_model.progress_percentage = 100
-                await db.commit()
                 
-                # Retrieve owner email if available to send completion notification
-                from models.auth import UserModel
+            # Retrieve owner email if available to send completion notification
+            if doc_model and doc_model.user_id:
                 from sqlalchemy import select
                 user_query = select(UserModel).where(UserModel.id == doc_model.user_id)
                 user_res = await db.execute(user_query)
@@ -114,7 +105,10 @@ async def _run_async_ingestion(
                 if doc and doc.status not in ("COMPLETED", "FAILED"):
                     doc.status = "FAILED"
                     doc.failure_reason = str(exc)
-                    doc.error = f"{type(exc).__name__}: {str(exc)}"
+                    if isinstance(exc, FileNotFoundError):
+                        doc.error = "File is no longer available on server disk (ephemeral storage cleared on server restart). Please re-upload this document."
+                    else:
+                        doc.error = f"{type(exc).__name__}: {str(exc)}"
                     await db.commit()
         except Exception as db_err:
             logger.error(f"[Worker] Could not mark doc={document_id} as FAILED: {db_err}")

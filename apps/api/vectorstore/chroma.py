@@ -310,3 +310,47 @@ class ChromaVectorStore(BaseVectorStore):
         except Exception as e:
             logger.error(f"[ChromaDB] Count error for '{collection_name}': {e}")
             return 0
+
+    async def get_by_filter(
+        self,
+        collection_name: str,
+        filter_meta: Dict[str, Any],
+        limit: int = 20,
+    ) -> List[Tuple[str, float, str, Dict[str, Any]]]:
+        try:
+            collection = await asyncio.to_thread(
+                self._client.get_or_create_collection,
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
+            where_clause = self._build_where_clause(filter_meta)
+            results = await asyncio.to_thread(
+                collection.get,
+                where=where_clause,
+                limit=limit,
+                include=["documents", "metadatas"],
+            )
+            formatted: List[Tuple[str, float, str, Dict[str, Any]]] = []
+            raw_ids = results.get("ids")
+            ids: List[str] = raw_ids if isinstance(raw_ids, list) else []
+
+            raw_docs = results.get("documents")
+            docs: List[Any] = raw_docs if isinstance(raw_docs, list) else []
+
+            raw_metas = results.get("metadatas")
+            metas: List[Any] = raw_metas if isinstance(raw_metas, list) else []
+
+            for i, chunk_id in enumerate(ids):
+                doc_val = docs[i] if i < len(docs) else None
+                text = str(doc_val) if doc_val is not None else ""
+
+                meta_val = metas[i] if i < len(metas) else None
+                meta = cast(Dict[str, Any], meta_val) if isinstance(meta_val, dict) else {}
+
+                # Baseline relevance score for direct document matches
+                formatted.append((chunk_id, 0.75, text, meta))
+            logger.info(f"[ChromaDB] get_by_filter returned {len(formatted)} chunk(s) for filters={filter_meta}")
+            return formatted
+        except Exception as e:
+            logger.warning(f"[ChromaDB] get_by_filter failed for '{collection_name}': {e}")
+            return []

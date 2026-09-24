@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Form, Query
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from services.document import DocumentService
@@ -121,6 +122,73 @@ async def upload_document(
         import logging
         logging.getLogger("documind.routers.document").error(f"Upload failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
+
+@router.post("/{id}/reindex", response_model=DocumentResponse)
+async def reindex_document(
+    id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    import asyncio
+    import logging
+    logger = logging.getLogger("documind.routers.document")
+    d = await _get_owned_document(id, db, current_user)
+    
+    storage_key = None
+    if isinstance(d.metadata_json, dict):
+        storage_key = d.metadata_json.get("storage_key")
+    if not storage_key:
+        storage_key = f"documents/{d.id}/{d.name}"
+
+    from storage import get_storage_provider
+    storage_provider = get_storage_provider()
+    
+    # Check if the file actually exists
+    file_exists = False
+    try:
+        file_exists = await storage_provider.file_exists(storage_key)
+    except Exception as exc:
+        logger.warning(f"Error checking file existence for {storage_key}: {exc}")
+
+    if not file_exists:
+        d.status = "FAILED"
+        d.error = "Original document source file is missing from storage. Please re-upload this document."
+        await db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Original file missing from storage. Please delete and re-upload the document."
+        )
+
+    d.status = "INGESTING"
+    d.error = None
+    d.progress_percentage = 10
+    await db.commit()
+
+    from workers.document_ingestion import _run_async_ingestion
+    mime_type = d.metadata_json.get("mimeType", "application/pdf") if isinstance(d.metadata_json, dict) else "application/pdf"
+    
+    asyncio.create_task(
+        _run_async_ingestion(
+            document_id=d.id,
+            storage_key=storage_key,
+            filename=d.name,
+            mime_type=mime_type,
+            user_id=d.user_id,
+            workspace_id=d.workspace_id,
+        )
+    )
+
+    return DocumentResponse(
+        id=d.id,
+        name=d.name,
+        storageUrl=d.storage_url,
+        status=d.status,
+        metadata=d.metadata_json,
+        createdAt=d.created_at,
+        updatedAt=d.updated_at,
+        userId=d.user_id,
+        error=d.error,
+    )
 
 @router.delete("/{id}")
 async def delete_document(
@@ -308,6 +376,8 @@ async def get_document_analysis(
                 )
             )
 
+    analyzed_ts = getattr(a, "analyzed_at", None) or datetime.now(timezone.utc).replace(tzinfo=None)
+
     return DocumentAnalysisResponse(
         documentId=a.document_id,
         summary=summary,
@@ -317,8 +387,20 @@ async def get_document_analysis(
         facts=facts,
         entityInconsistencies=entityInconsistencies,
         semanticConflicts=semanticConflicts,
-        analyzedAt=a.analyzed_at
+        analyzedAt=analyzed_ts
     )
+
+
+@router.get("/{id}/entities")
+async def get_document_entities(
+    id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    await _get_owned_document(id, db, current_user)
+    analysis_service = AnalysisService(db)
+    a = await analysis_service.get_or_create_analysis(id)
+    return getattr(a, "entities_json", []) or []
 
 
 
@@ -416,3 +498,51 @@ async def get_document_review(
     analysis_service = AnalysisService(db)
     a = await analysis_service.get_or_create_analysis(id)
     return getattr(a, "review_json", {}) or {}
+
+
+@router.post("/{id}/reindex", response_model=DocumentResponse)
+async def reindex_document(
+    id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Triggers asynchronous vector index compilation for a queued or failed document.
+    Transitions status to INDEXING and executes parsing, chunking, and embedding.
+    """
+    import asyncio
+    d = await _get_owned_document(id, db, current_user)
+    meta = d.metadata_json or {}
+    storage_key = meta.get("storage_key") or d.storage_url
+    filename = d.name
+    mime_type = meta.get("mimeType")
+
+    d.status = "INDEXING"
+    d.progress_percentage = 15
+    d.error = None
+    await db.commit()
+
+    from workers.document_ingestion import _run_async_ingestion
+    asyncio.create_task(
+        _run_async_ingestion(
+            document_id=d.id,
+            storage_key=storage_key,
+            filename=filename,
+            mime_type=mime_type,
+            user_id=d.user_id,
+            workspace_id=d.workspace_id,
+        )
+    )
+
+    return DocumentResponse(
+        id=d.id,
+        name=d.name,
+        storageUrl=d.storage_url,
+        status=d.status,  # type: ignore
+        metadata=d.metadata_json,  # type: ignore
+        createdAt=d.created_at,
+        updatedAt=d.updated_at,
+        userId=d.user_id,
+        error=d.error
+    )
+

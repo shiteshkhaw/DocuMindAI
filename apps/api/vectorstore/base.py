@@ -53,3 +53,12 @@ class BaseVectorStore(ABC):
         """Returns the number of vectors in the collection."""
         pass
 
+    async def get_by_filter(
+        self,
+        collection_name: str,
+        filter_meta: Dict[str, Any],
+        limit: int = 20,
+    ) -> List[Tuple[str, float, str, Dict[str, Any]]]:
+        """Fetches raw documents and metadata matching a metadata filter without semantic vector distance."""
+        return []
+

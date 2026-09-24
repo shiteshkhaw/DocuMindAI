@@ -196,6 +196,10 @@ class ChatService:
                     full_content += token
                     # Include type=token so the SDK can distinguish from other events
                     yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+                elif chunk["type"] == "log":
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                elif chunk["type"] == "retrieval_diagnostics":
+                    yield f"data: {json.dumps(chunk)}\n\n"
                 elif chunk["type"] == "citations":
                     citations = chunk["citations"]
                     yield f"data: {json.dumps({'type': 'citations', 'citations': citations})}\n\n"
@@ -210,6 +214,7 @@ class ChatService:
                     citations = chunk.get("citations", citations)
                     if "full_content" in chunk:
                         full_content = chunk["full_content"]
+                    yield f"data: {json.dumps(chunk)}\n\n"
 
         except Exception as e:
             error_msg = f"Streaming generation failed: {str(e)}"

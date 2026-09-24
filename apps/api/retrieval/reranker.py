@@ -12,7 +12,7 @@ class CrossEncoderReranker:
         embedding_provider: BaseEmbeddingProvider,
         hf_api_key: str | None = None,
         model: str = "BAAI/bge-reranker-large",
-        timeout: float = 10.0
+        timeout: float = 2.5
     ):
         self.embedding_provider = embedding_provider
         self.hf_api_key = hf_api_key

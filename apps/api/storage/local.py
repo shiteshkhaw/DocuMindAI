@@ -21,8 +21,19 @@ class LocalStorageProvider(BaseStorageProvider):
         logger.info(f"[LocalStorage] Root path set to: {self.base_dir}")
 
     def _get_path(self, key: str) -> Path:
-        # Prevent directory traversal attacks
-        normalized = Path(key).as_posix().lstrip("/")
+        # If key is a file URI or path, extract the relative key or filename
+        cleaned = key
+        if cleaned.startswith("file://"):
+            cleaned = cleaned.replace("file:///", "").replace("file://", "")
+        # If it was saved with local_storage prefix, strip it
+        if "local_storage/" in cleaned:
+            cleaned = cleaned.split("local_storage/")[-1]
+
+        normalized = Path(cleaned).as_posix().lstrip("/")
+        # If it's still an absolute path from a different OS/container, take the filename
+        if Path(normalized).is_absolute() or ":" in normalized:
+            normalized = Path(normalized).name
+
         resolved = (self.base_dir / normalized).resolve()
         if not resolved.is_relative_to(self.base_dir):
             raise ValueError(f"Path traversal detected: {key}")

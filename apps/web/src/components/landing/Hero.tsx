@@ -72,27 +72,23 @@ export default function Hero() {
       className="relative overflow-hidden min-h-[92vh] flex flex-col items-center justify-center pt-16 pb-20"
       aria-labelledby="hero-heading"
     >
-      {/* ── Ambient orb layer ── */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <motion.div
-          animate={{
-            scale: [1, 1.15, 1],
-            opacity: [0.35, 0.55, 0.35],
-            x: [0, 60, 0],
-            y: [0, -40, 0],
+      {/* ── Ambient orb layer (hardware-accelerated radial gradients) ── */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden transform-gpu">
+        <div
+          className="absolute -top-[20%] left-[15%] h-[60vw] w-[60vw] rounded-full opacity-60"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, rgba(99, 102, 241, 0) 70%)",
+            willChange: "transform",
           }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-[30%] left-[10%] h-[70vw] w-[70vw] rounded-full bg-indigo-400/15 blur-[130px]"
         />
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.25, 0.45, 0.25],
-            x: [0, -50, 0],
-            y: [0, 60, 0],
+        <div
+          className="absolute -bottom-[15%] right-[10%] h-[50vw] w-[50vw] rounded-full opacity-50"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(13, 148, 136, 0.14) 0%, rgba(13, 148, 136, 0) 70%)",
+            willChange: "transform",
           }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-[20%] right-[5%] h-[60vw] w-[60vw] rounded-full bg-teal-400/15 blur-[120px]"
         />
       </div>
 

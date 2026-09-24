@@ -43,6 +43,7 @@ import {
   PanelLeftClose,
   Lock,
   Play,
+  MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -655,11 +656,29 @@ export default function DashboardShell() {
   const { workspaces, activeWorkspaceId, fetchWorkspaces, setActiveWorkspace, createWorkspace } =
     useWorkspaceStore();
 
-  // Keep logs in state to avoid breaking dependencies, but hidden from the main editorial UI
-  const [systemLogs, setSystemLogs] = React.useState<SystemLog[]>([
-    { id: "log-1", time: "19:41:19", level: "INFO", message: "SYSTEM: DocuMind Kernel booting..." },
-    { id: "log-2", time: "19:41:19", level: "SUCCESS", message: "CLUSTER: Vector shard online." },
-  ]);
+  // Dynamic developer console telemetry logs
+  const [systemLogs, setSystemLogs] = React.useState<SystemLog[]>(() => {
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    return [
+      {
+        id: "log-1",
+        time: timeStr,
+        level: "INFO",
+        message: "SYSTEM: DocuMind Kernel initialized.",
+      },
+      {
+        id: "log-2",
+        time: timeStr,
+        level: "SUCCESS",
+        message: "CLUSTER: Chroma DB vector shard online.",
+      },
+    ];
+  });
 
   const addLog = React.useCallback((level: SystemLog["level"], message: string) => {
     const timeStr = new Date().toLocaleTimeString([], {
@@ -673,6 +692,21 @@ export default function DashboardShell() {
       { id: `log-${Date.now()}-${Math.random()}`, time: timeStr, level, message },
     ]);
   }, []);
+
+  // Ping cluster health on load and log real cluster status
+  React.useEffect(() => {
+    sdk
+      .getHealth()
+      .then((h) => {
+        addLog(
+          "SUCCESS",
+          `KERNEL: ${h.service || "DocuMind"} status: ${h.status}. Chroma: ${h.chroma} (${h.chroma_backend}).`,
+        );
+      })
+      .catch((err) => {
+        addLog("WARN", `KERNEL: Backend health check failed: ${err.message || "Connecting..."}`);
+      });
+  }, [addLog]);
 
   const handleLaunchRecruiterTour = () => {
     // 1. Populate useChatStore with simulated documents and session
@@ -1211,11 +1245,25 @@ export default function DashboardShell() {
               ? "bg-primary hover:bg-primary/95 text-primary-foreground border-transparent shadow-md shadow-primary/10"
               : "opacity-60 pointer-events-none",
           )}
-          onClick={handleStartSession}
-          disabled={selectedDocumentIds.length === 0}
+          onClick={handleCompileOrStartSession}
+          disabled={selectedDocumentIds.length === 0 || isAnySelectedIndexing || isCompilingDocs}
         >
-          <Sparkles className="h-3.5 w-3.5 mr-2" />
-          Compile Index ({selectedDocumentIds.length})
+          {isAnySelectedIndexing || isCompilingDocs ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              Compiling Vector Index...
+            </>
+          ) : isAnySelectedUnready ? (
+            <>
+              <Sparkles className="h-3.5 w-3.5 mr-2" />
+              Compile Vector Index ({unreadySelectedDocs.length})
+            </>
+          ) : (
+            <>
+              <MessageSquare className="h-3.5 w-3.5 mr-2" />
+              Start RAG Session ({selectedDocumentIds.length})
+            </>
+          )}
         </Button>
       </div>
     </div>
@@ -1352,6 +1400,10 @@ export default function DashboardShell() {
       setSelectedContradictionDocId(activeSession.documentIds[0]);
       setEntityDocId(activeSession.documentIds[0]);
       setIntelligenceDocId(activeSession.documentIds[0]);
+    } else if (documents.length > 0) {
+      setSelectedContradictionDocId(documents[0].id);
+      setEntityDocId(documents[0].id);
+      setIntelligenceDocId(documents[0].id);
     } else {
       setSelectedContradictionDocId(null);
       setEntityDocId(null);
@@ -1375,6 +1427,18 @@ export default function DashboardShell() {
     setIntelligenceSubTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSession?.id]);
+
+  React.useEffect(() => {
+    if (!entityDocId && documents.length > 0) {
+      setEntityDocId(documents[0].id);
+    }
+    if (!selectedContradictionDocId && documents.length > 0) {
+      setSelectedContradictionDocId(documents[0].id);
+    }
+    if (!intelligenceDocId && documents.length > 0) {
+      setIntelligenceDocId(documents[0].id);
+    }
+  }, [documents, entityDocId, selectedContradictionDocId, intelligenceDocId]);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -1470,6 +1534,43 @@ export default function DashboardShell() {
     fetchDocs();
   }, [activeWorkspaceId, setDocuments]);
 
+  // Auto-poll documents whenever any document is not yet processed / ready
+  React.useEffect(() => {
+    const hasPending = documents.some(
+      (d) =>
+        d.status !== "COMPLETED" &&
+        d.status !== "processed" &&
+        d.status !== "FAILED" &&
+        d.status !== "failed",
+    );
+    if (!hasPending) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const freshDocs = await sdk.listDocuments(activeWorkspaceId || undefined);
+        setDocuments(freshDocs);
+        freshDocs.forEach((fresh) => {
+          const old = documents.find((d) => d.id === fresh.id);
+          if (
+            old &&
+            old.status !== "COMPLETED" &&
+            old.status !== "processed" &&
+            (fresh.status === "COMPLETED" || fresh.status === "processed")
+          ) {
+            addLog(
+              "SUCCESS",
+              `INDEXER: Vector compilation complete for "${fresh.name}". Document Ready.`,
+            );
+          }
+        });
+      } catch (err) {
+        console.warn("Polling documents failed:", err);
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [documents, activeWorkspaceId, setDocuments, addLog]);
+
   // Scroll chat window to bottom
   React.useEffect(() => {
     if (scrollRef.current) {
@@ -1483,12 +1584,20 @@ export default function DashboardShell() {
     setErrorMsg(null);
     try {
       for (const file of files) {
-        addLog("INFO", `Ingesting file: ${file.name}`);
+        addLog(
+          "INFO",
+          `INGESTION: Ingesting file "${file.name}" (${(file.size / 1024).toFixed(1)} KB)...`,
+        );
         const doc = await sdk.uploadDocument(file, activeWorkspaceId || undefined);
         setDocuments((prev) => [...prev, doc]);
+        addLog(
+          "INFO",
+          `INDEXER: Dispatched "${doc.name}" to vectorization pipeline (status: ${doc.status})`,
+        );
       }
     } catch (e: any) {
       setErrorMsg(e.message || "Failed to upload document");
+      addLog("ERROR", `INGESTION ERROR: ${e.message || "Failed to upload document"}`);
     } finally {
       setIsUploading(false);
     }
@@ -1514,6 +1623,65 @@ export default function DashboardShell() {
     toggleDocumentSelection(docId);
   };
 
+  // Selected document state computation
+  const selectedDocs = React.useMemo(
+    () => documents.filter((d) => selectedDocumentIds.includes(d.id)),
+    [documents, selectedDocumentIds],
+  );
+  const unreadySelectedDocs = React.useMemo(
+    () => selectedDocs.filter((d) => d.status !== "COMPLETED" && d.status !== "processed"),
+    [selectedDocs],
+  );
+  const isAnySelectedUnready = unreadySelectedDocs.length > 0;
+  const isAnySelectedIndexing = selectedDocs.some(
+    (d) =>
+      d.status === "INDEXING" ||
+      d.status === "EMBEDDING" ||
+      d.status === "ANALYZING" ||
+      d.status === "CHUNKING" ||
+      d.status === "PARSING" ||
+      d.status === "processing",
+  );
+
+  const [isCompilingDocs, setIsCompilingDocs] = React.useState(false);
+
+  // Compile Index or Start RAG Session
+  const handleCompileOrStartSession = async () => {
+    if (selectedDocumentIds.length === 0) {
+      setErrorMsg("Please select at least one document to analyze.");
+      return;
+    }
+    setErrorMsg(null);
+
+    // If any selected document is not ready yet, trigger indexing!
+    if (isAnySelectedUnready) {
+      setIsCompilingDocs(true);
+      for (const unready of unreadySelectedDocs) {
+        addLog("INFO", `INDEXER: Launching vector compilation for "${unready.name}"...`);
+        try {
+          const updated = await sdk.reindexDocument(unready.id);
+          setDocuments((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+          addLog("INFO", `INDEXER: Parsing and embedding pipeline running for "${unready.name}"`);
+        } catch (err: any) {
+          const msg = err.message || "Failed to index document";
+          setErrorMsg(msg);
+          addLog("ERROR", `INDEXER: Compilation failed for "${unready.name}": ${msg}`);
+          try {
+            const freshDocs = await sdk.listDocuments(activeWorkspaceId || undefined);
+            setDocuments(freshDocs);
+          } catch {}
+          setIsCompilingDocs(false);
+          return;
+        }
+      }
+      setIsCompilingDocs(false);
+      return;
+    }
+
+    // All selected documents are Ready! Start session
+    await handleStartSession();
+  };
+
   // Start RAG Chat Session
   const handleStartSession = async () => {
     if (selectedDocumentIds.length === 0) {
@@ -1528,7 +1696,10 @@ export default function DashboardShell() {
       const sess = await sdk.createSession({ title, documentIds: selectedDocumentIds });
       setActiveSession(sess);
       setSessions([sess, ...sessions]);
-      addLog("SUCCESS", `Session created: ${sess.id}`);
+      addLog(
+        "SUCCESS",
+        `Session created: ${sess.id} (${selectedDocumentIds.length} document(s) linked)`,
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create session.";
       if (!handleRateLimitError(err)) {
@@ -1579,6 +1750,11 @@ export default function DashboardShell() {
     };
     addMessageToActiveSession(initialAssistantMsg);
 
+    addLog(
+      "INFO",
+      `QUERY: "${userMessageContent.slice(0, 48)}${userMessageContent.length > 48 ? "..." : ""}"`,
+    );
+
     let streamSuccess = false;
     try {
       const generator = sdk.streamMessage({
@@ -1593,16 +1769,33 @@ export default function DashboardShell() {
           updateLastMessageContent(chunk.content);
         } else if (!chunk.type && chunk.content) {
           updateLastMessageContent(chunk.content);
+        } else if (chunk.type === "log") {
+          addLog(chunk.level || "INFO", chunk.message);
         } else if (chunk.type === "retrieval_diagnostics") {
           setRetrievalDiagnosticsMap((prev) => ({
             ...prev,
             [assistantMsgId]: chunk,
           }));
           setSelectedDiagMsgId(assistantMsgId);
+          addLog(
+            "INFO",
+            `RETRIEVAL: Evaluated ${chunk.retrieval_count} context chunk(s) across Chroma shards`,
+          );
+        } else if (chunk.type === "citations") {
+          if (chunk.citations?.length) {
+            addLog(
+              "SUCCESS",
+              `ATTRIBUTION: Compiled ${chunk.citations.length} dynamic source citation(s)`,
+            );
+          }
+        } else if (chunk.type === "metrics") {
+          addLog(
+            "SUCCESS",
+            `KERNEL: Reasoning complete in ${chunk.duration_seconds?.toFixed(2)}s (${chunk.completion_tokens || 0} tokens generated).`,
+          );
         }
       }
 
-      addLog("SUCCESS", "RAG reasoning complete. Dynamic source attributions compiled.");
       streamSuccess = true;
     } catch (err: unknown) {
       const msg =
@@ -2551,56 +2744,127 @@ export default function DashboardShell() {
                                         </div>
 
                                         {/* Sub-Accordion 2: Supporting evidence */}
-                                        <div className="border border-border rounded-xl bg-card overflow-hidden shadow-2xs">
-                                          <button
-                                            onClick={() =>
-                                              toggleReasoningPanel(insight.id, "evidence")
-                                            }
-                                            className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-foreground font-semibold hover:bg-secondary/30 transition-colors"
-                                          >
-                                            <span className="flex items-center gap-2">
-                                              <FileText className="h-3.5 w-3.5 text-indigo-500" />
-                                              Supporting Evidence ({insight.citations.length} cited
-                                              segments)
-                                            </span>
-                                            <ChevronDown
-                                              className={cn(
-                                                "h-3.5 w-3.5 transition-transform",
-                                                isEvidenceOpen && "transform rotate-180",
-                                              )}
-                                            />
-                                          </button>
-                                          <AnimatePresence initial={false}>
-                                            {isEvidenceOpen && (
-                                              <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2, ease: "easeInOut" }}
-                                                className="overflow-hidden border-t border-border"
+                                        {(() => {
+                                          const citationsList =
+                                            insight.citations &&
+                                            Array.isArray(insight.citations) &&
+                                            insight.citations.length > 0
+                                              ? insight.citations
+                                              : insight.conflictingStatements &&
+                                                  Array.isArray(insight.conflictingStatements) &&
+                                                  insight.conflictingStatements.length > 0
+                                                ? insight.conflictingStatements.map(
+                                                    (stmt: any) => ({
+                                                      documentName:
+                                                        stmt.documentName ||
+                                                        documents.find(
+                                                          (d) =>
+                                                            d.id ===
+                                                            (stmt.documentId ||
+                                                              selectedContradictionDocId),
+                                                        )?.name ||
+                                                        "Document",
+                                                      pageNumber: stmt.page ?? stmt.pageNumber ?? 1,
+                                                      snippet:
+                                                        stmt.text ||
+                                                        stmt.quote ||
+                                                        stmt.statement ||
+                                                        stmt.claim ||
+                                                        stmt.evidence ||
+                                                        "",
+                                                    }),
+                                                  )
+                                                : [];
+
+                                          return (
+                                            <div className="border border-border rounded-xl bg-card overflow-hidden shadow-2xs">
+                                              <button
+                                                onClick={() =>
+                                                  toggleReasoningPanel(insight.id, "evidence")
+                                                }
+                                                className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-foreground font-semibold hover:bg-secondary/30 transition-colors"
                                               >
-                                                <div className="px-4 pb-4 pt-2 space-y-3.5">
-                                                  {insight.citations.map(
-                                                    (cit: any, idx: number) => (
-                                                      <div
-                                                        key={idx}
-                                                        className="space-y-1.5 p-3 rounded-lg border border-border bg-secondary/20"
-                                                      >
-                                                        <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
-                                                          <span>Source Chunk {idx + 1}</span>
-                                                          <span>Page {cit.pageNumber}</span>
-                                                        </div>
-                                                        <p className="text-xs text-foreground font-medium italic select-all leading-normal">
-                                                          &ldquo;{cit.snippet}&rdquo;
-                                                        </p>
-                                                      </div>
-                                                    ),
+                                                <span className="flex items-center gap-2">
+                                                  <FileText className="h-3.5 w-3.5 text-indigo-500" />
+                                                  Supporting Evidence ({citationsList.length} cited
+                                                  segments)
+                                                </span>
+                                                <ChevronDown
+                                                  className={cn(
+                                                    "h-3.5 w-3.5 transition-transform",
+                                                    isEvidenceOpen && "transform rotate-180",
                                                   )}
-                                                </div>
-                                              </motion.div>
-                                            )}
-                                          </AnimatePresence>
-                                        </div>
+                                                />
+                                              </button>
+                                              <AnimatePresence initial={false}>
+                                                {isEvidenceOpen && (
+                                                  <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: "auto", opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{
+                                                      duration: 0.2,
+                                                      ease: "easeInOut",
+                                                    }}
+                                                    className="overflow-hidden border-t border-border"
+                                                  >
+                                                    <div className="px-4 pb-4 pt-2 space-y-3.5">
+                                                      {citationsList.length === 0 ? (
+                                                        <p className="text-xs text-muted-foreground italic py-1">
+                                                          No direct quotation citations recorded for
+                                                          this finding.
+                                                        </p>
+                                                      ) : (
+                                                        citationsList.map(
+                                                          (cit: any, idx: number) => {
+                                                            const docName =
+                                                              cit.documentName ||
+                                                              documents.find(
+                                                                (d) =>
+                                                                  d.id ===
+                                                                  (cit.documentId ||
+                                                                    selectedContradictionDocId),
+                                                              )?.name ||
+                                                              "Source Document";
+                                                            const pageNum =
+                                                              cit.pageNumber ?? cit.page ?? 1;
+                                                            const snippetText =
+                                                              cit.snippet ||
+                                                              cit.text ||
+                                                              cit.quote ||
+                                                              cit.statement ||
+                                                              cit.evidence ||
+                                                              "";
+
+                                                            return (
+                                                              <div
+                                                                key={idx}
+                                                                className="space-y-1.5 p-3 rounded-lg border border-border bg-secondary/20"
+                                                              >
+                                                                <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
+                                                                  <span className="flex items-center gap-1.5 font-mono text-primary/80">
+                                                                    <FileText className="h-3 w-3" />
+                                                                    {docName}
+                                                                  </span>
+                                                                  <span className="px-1.5 py-0.5 rounded bg-secondary text-foreground/80 font-mono">
+                                                                    Page {pageNum}
+                                                                  </span>
+                                                                </div>
+                                                                <p className="text-xs text-foreground font-medium italic select-all leading-relaxed">
+                                                                  &ldquo;{snippetText}&rdquo;
+                                                                </p>
+                                                              </div>
+                                                            );
+                                                          },
+                                                        )
+                                                      )}
+                                                    </div>
+                                                  </motion.div>
+                                                )}
+                                              </AnimatePresence>
+                                            </div>
+                                          );
+                                        })()}
 
                                         {/* Sub-Accordion 3: Timeline comparison (Only for timeline conflicts) */}
                                         {insight.type === "timeline" && (
@@ -3603,43 +3867,43 @@ export default function DashboardShell() {
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          {activeSession && activeSession.documentIds.length > 1 && (
+                          {documents.length > 0 && (
                             <select
-                              value={entityDocId || ""}
+                              value={entityDocId || documents[0]?.id || ""}
                               onChange={(e) => setEntityDocId(e.target.value)}
                               disabled={isLoadingEntities}
-                              className="text-xs px-3 py-2 bg-secondary/50 border border-border rounded-xl text-foreground focus-visible:outline-none"
+                              className="text-xs px-3 py-2 bg-secondary/50 border border-border rounded-xl text-foreground focus-visible:outline-none max-w-[220px] truncate"
                             >
-                              {activeSession.documentIds.map((docId) => {
-                                const d = documents.find((doc) => doc.id === docId);
-                                return (
-                                  <option key={docId} value={docId}>
-                                    {d ? d.name : docId}
-                                  </option>
-                                );
-                              })}
+                              {documents.map((doc) => (
+                                <option key={doc.id} value={doc.id}>
+                                  {doc.name}
+                                </option>
+                              ))}
                             </select>
                           )}
                           <Button
                             onClick={async () => {
-                              if (!entityDocId) return;
+                              const targetDocId = entityDocId || documents[0]?.id;
+                              if (!targetDocId) return;
                               setIsLoadingEntities(true);
                               setEntityAnalysis(null);
+                              setErrorMsg(null);
                               try {
-                                const analysis = await sdk.getAnalysis(entityDocId);
+                                const analysis = await sdk.getAnalysis(targetDocId);
                                 setEntityAnalysis(analysis);
                                 addLog(
                                   "SUCCESS",
-                                  `Entity analysis complete: ${analysis.entities.length} entities found`,
+                                  `Entity analysis complete: ${analysis.entities?.length || 0} entities found`,
                                 );
                               } catch (err: any) {
-                                addLog("ERROR", `Entity analysis failed: ${err.message}`);
-                                setErrorMsg(err.message);
+                                const message = err.message || "Failed to fetch entity analysis";
+                                addLog("ERROR", `Entity analysis failed: ${message}`);
+                                setErrorMsg(message);
                               } finally {
                                 setIsLoadingEntities(false);
                               }
                             }}
-                            disabled={isLoadingEntities || !entityDocId}
+                            disabled={isLoadingEntities || (!entityDocId && documents.length === 0)}
                             className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-primary/10"
                           >
                             {isLoadingEntities ? (
@@ -3785,6 +4049,20 @@ export default function DashboardShell() {
                           )}
 
                           {/* Entity Cards */}
+                          {(entityAnalysis.entities || []).length === 0 && (
+                            <div className="p-8 border border-dashed border-border bg-card/10 rounded-2xl text-center space-y-2">
+                              <Users className="h-8 w-8 text-muted-foreground mx-auto" />
+                              <p className="text-xs font-semibold text-foreground">
+                                No named entities detected
+                              </p>
+                              <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
+                                The document segment does not contain recognized named entities or
+                                analysis is still completing in background. Click &ldquo;Extract
+                                Entities&rdquo; to re-scan.
+                              </p>
+                            </div>
+                          )}
+
                           {(entityAnalysis.entities || []).length > 0 && (
                             <div className="space-y-3">
                               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">

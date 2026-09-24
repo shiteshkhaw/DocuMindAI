@@ -93,8 +93,20 @@ class RAGOrchestrator:
         # ── 0. Resolve LLM provider early (needed for query expansion) ────
         provider_name, actual_model = llm_registry.resolve_model_route(model_name)
 
+        yield {
+            "type": "log",
+            "level": "INFO",
+            "message": f"RETRIEVAL: Querying vector shards for {len(document_ids)} focused document(s)...",
+        }
+
         # ── 1. Query Expansion (concurrent with nothing else, but fast) ───
         expanded_query = await self._expand_query(query, provider_name, actual_model)
+        if expanded_query and expanded_query != query:
+            yield {
+                "type": "log",
+                "level": "INFO",
+                "message": f"EXPANSION: Semantic query enhanced to \"{expanded_query[:65]}...\"",
+            }
 
         # ── 2. Hybrid Retrieval ───────────────────────────────────────────
         with ExecutionTracker("RAG_Retrieval", {"query": query, "document_ids": document_ids}):
@@ -115,19 +127,32 @@ class RAGOrchestrator:
         if retrieval_res.results:
             scores = [f"{r.score:.3f}" for r in retrieval_res.results]
             logger.info(f"[RAG] Hybrid scores (top {len(scores)}): {scores}")
+            yield {
+                "type": "log",
+                "level": "SUCCESS",
+                "message": f"RETRIEVAL: {len(retrieval_res.results)} relevant chunk(s) retrieved from Chroma (top score: {scores[0]})",
+            }
         else:
             logger.warning(
                 "[RAG] Zero chunks retrieved — vector store may be empty or "
                 "embeddings not yet ingested."
             )
+            yield {
+                "type": "log",
+                "level": "WARN",
+                "message": "RETRIEVAL: 0 candidate chunks found in active vector index",
+            }
 
         # ── 3. Lookup document names ──────────────────────────────────────
         doc_names: Dict[str, str] = {}
+        pending_doc_notes: List[str] = []
         if document_ids:
             for doc_id in document_ids:
                 doc_m = await self.doc_repo.get(doc_id)
                 if doc_m:
                     doc_names[doc_id] = doc_m.name
+                    if doc_m.status not in ("COMPLETED", "processed"):
+                        pending_doc_notes.append(f"'{doc_m.name}' (current status: {doc_m.status})")
 
         # ── 4. Citations ──────────────────────────────────────────────────
         with ExecutionTracker("RAG_ContextOptimization"):
@@ -140,6 +165,12 @@ class RAGOrchestrator:
 
         # Emit citations immediately so frontend shows source cards during stream
         yield {"type": "citations", "citations": citations}
+        if citations:
+            yield {
+                "type": "log",
+                "level": "SUCCESS",
+                "message": f"ATTRIBUTION: Compiled {len(citations)} verified citation block(s)",
+            }
 
         # ── 5. Retrieval Diagnostics (NEW) ────────────────────────────────
         diagnostics_chunks = []
@@ -171,14 +202,37 @@ class RAGOrchestrator:
                 f"[RAG] Context: ~{opt_result.total_estimated_tokens} tokens, "
                 f"{len(opt_result.selected_chunk_ids)} chunk(s)"
             )
+            yield {
+                "type": "log",
+                "level": "INFO",
+                "message": f"OPTIMIZER: Structured {len(opt_result.selected_chunk_ids)} chunk(s) (~{opt_result.total_estimated_tokens} tokens) into prompt",
+            }
         else:
-            context_block = (
-                "[NO DOCUMENT CONTEXT AVAILABLE]\n"
-                "No relevant chunks were retrieved from the uploaded documents for this query. "
-                "This may mean the document has not finished ingestion, or the query does not "
-                "match any content in the selected files."
-            )
+            if pending_doc_notes:
+                context_block = (
+                    f"[NOTICE: DOCUMENT COMPILATION IN PROGRESS]\n"
+                    f"The active document {', '.join(pending_doc_notes)} has not completed vector indexing yet. "
+                    "Inform the user clearly that indexing is still queued or in progress, and advise them to click 'Compile Vector Index' or wait a few seconds."
+                )
+                yield {
+                    "type": "log",
+                    "level": "WARN",
+                    "message": f"NOTICE: Active document is still indexing: {', '.join(pending_doc_notes)}",
+                }
+            else:
+                context_block = (
+                    "[NO DOCUMENT CONTEXT AVAILABLE]\n"
+                    "No relevant chunks were retrieved from the uploaded documents for this query. "
+                    "This may mean the document has not finished ingestion, or the query does not "
+                    "match any content in the selected files."
+                )
             logger.warning("[RAG] Context block is EMPTY — LLM will be told no context available.")
+
+        yield {
+            "type": "log",
+            "level": "INFO",
+            "message": f"INFERENCE: Routing prompt to {actual_model} ({provider_name})...",
+        }
 
         system_instruction = (
             "You are DocuMind AI, a premium semantic document intelligence assistant.\n"
@@ -243,6 +297,12 @@ class RAGOrchestrator:
             duration_seconds=duration,
             retrieval_count=len(citations)
         )
+
+        yield {
+            "type": "log",
+            "level": "SUCCESS",
+            "message": f"KERNEL: Synthesis complete in {duration:.2f}s ({completion_tokens} tokens generated, {len(citations)} citations verified)",
+        }
 
         yield {
             "type": "metrics",

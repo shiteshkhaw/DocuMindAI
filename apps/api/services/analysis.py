@@ -26,6 +26,15 @@ class AnalysisService:
         cached_data = await cache_service.get("analysis", "document", document_id)
         if cached_data:
             logger.info(f"[Analysis] Cache HIT in Redis for doc={document_id}")
+            analyzed_at = None
+            if cached_data.get("analyzed_at"):
+                try:
+                    analyzed_at = datetime.fromisoformat(cached_data["analyzed_at"])
+                except Exception:
+                    analyzed_at = None
+            if not analyzed_at:
+                analyzed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
             return DocumentAnalysisModel(
                 id=cached_data["id"],
                 document_id=cached_data["document_id"],
@@ -40,7 +49,8 @@ class AnalysisService:
                 requirements_json=cached_data.get("requirements_json"),
                 trust_score_json=cached_data.get("trust_score_json"),
                 executive_summary_json=cached_data.get("executive_summary_json"),
-                review_json=cached_data.get("review_json")
+                review_json=cached_data.get("review_json"),
+                analyzed_at=analyzed_at
             )
 
         if document_id not in _analysis_locks:
@@ -76,21 +86,48 @@ class AnalysisService:
             )
             return await self._create_empty_analysis(document_id)
 
-        # ── Phase 1: Entity extraction (existing) ─────────────────────────────
+        # ── Stage 1: Parallel extraction of base representations ───────────────
+        # Entity extraction, Fact extraction, Deterministic contradictions,
+        # Ambiguities, References, and Requirements are independent of each other.
         from services.entity import EntityGraphService
+        from services.facts import FactExtractionService
+        from services.deterministic_contradiction import DeterministicContradictionDetector
+        from services.ambiguity import AmbiguityDetectionService
+        from services.reference import ReferenceIntegrityService
+        from services.requirements import RequirementTraceabilityService
+
         entity_service = EntityGraphService(self.repo.db)
+        fact_service = FactExtractionService()
+        det_detector = DeterministicContradictionDetector()
+        ambiguity_service = AmbiguityDetectionService()
+        reference_service = ReferenceIntegrityService()
+        requirements_service = RequirementTraceabilityService()
 
         logger.info(
-            f"[Analysis] Running EntityGraphService extraction for doc={document_id} "
+            f"[Analysis] Running Stage 1 parallel extractions for doc={document_id} "
             f"on {len(chunks_text)} chunks"
         )
-        t0 = time.perf_counter()
-        extracted = await entity_service.analyze_entities(chunks_text, document_id, doc_name)
-        elapsed = time.perf_counter() - t0
-        logger.info(
-            f"[Analysis] Extraction complete for doc={document_id} in {elapsed*1000:.1f}ms | "
-            f"entities={len(extracted.get('entities', []))}"
+        t_stage1 = time.perf_counter()
+        stage1_results = await asyncio.gather(
+            entity_service.analyze_entities(chunks_text, document_id, doc_name),
+            fact_service.extract_facts(chunks=chunks_text, document_id=document_id, metadatas=chunks_meta),
+            asyncio.to_thread(det_detector.detect, chunks=chunks_text, metadatas=chunks_meta, document_id=document_id, doc_name=doc_name),
+            ambiguity_service.detect_ambiguities(chunks=chunks_text, metadatas=chunks_meta),
+            reference_service.verify_references(chunks=chunks_text, metadatas=chunks_meta),
+            requirements_service.generate_matrix(chunks=chunks_text, metadatas=chunks_meta),
+            return_exceptions=True
         )
+        logger.info(
+            f"[Analysis] Stage 1 parallel extractions complete for doc={document_id} in "
+            f"{(time.perf_counter()-t_stage1)*1000:.1f}ms"
+        )
+
+        extracted = stage1_results[0] if not isinstance(stage1_results[0], BaseException) else {}
+        facts = stage1_results[1] if not isinstance(stage1_results[1], BaseException) else []
+        deterministic_conflicts = stage1_results[2] if not isinstance(stage1_results[2], BaseException) else []
+        ambiguities = stage1_results[3] if not isinstance(stage1_results[3], BaseException) else []
+        references = stage1_results[4] if not isinstance(stage1_results[4], BaseException) else []
+        requirements = stage1_results[5] if not isinstance(stage1_results[5], BaseException) else []
 
         entities = extracted.get("entities", [])
         entity_conflicts = extracted.get("entityConflicts", [])
@@ -99,86 +136,42 @@ class AnalysisService:
 
         # Assign stable IDs
         for ent in entities:
-            ent["id"] = f"ent-{uuid.uuid4()}"
-            ent["frequency"] = len(ent.get("mentions", []))
+            ent["id"] = ent.get("id") or f"ent-{uuid.uuid4()}"
+            ent["frequency"] = ent.get("frequency") or len(ent.get("mentions", []))
             if "related_entities" not in ent:
                 ent["related_entities"] = []
 
         for kv in kv_pairs:
-            kv["id"] = f"kv-{uuid.uuid4()}"
+            kv["id"] = kv.get("id") or f"kv-{uuid.uuid4()}"
 
-        # ── Phase 2a: Fact Extraction ─────────────────────────────────────────
-        from services.facts import FactExtractionService
-        fact_service = FactExtractionService()
-        logger.info(f"[Analysis] Running FactExtractionService for doc={document_id}")
-        t1 = time.perf_counter()
-        facts = await fact_service.extract_facts(
-            chunks=chunks_text,
-            document_id=document_id,
-            metadatas=chunks_meta,
-        )
-        logger.info(
-            f"[Analysis] FactExtraction complete for doc={document_id} in "
-            f"{(time.perf_counter()-t1)*1000:.1f}ms | facts={len(facts)}"
-        )
-
-        # ── Phase 2b: Entity Consistency ─────────────────────────────────────
+        # ── Stage 2: Parallel Inconsistency & Semantic Conflict Discovery ─────
         from services.entity_consistency import EntityConsistencyService
-        consistency_service = EntityConsistencyService()
-        logger.info(f"[Analysis] Running EntityConsistencyService for doc={document_id}")
-        t2 = time.perf_counter()
-        entity_inconsistencies = await consistency_service.find_inconsistencies(
-            entities=entities,
-            document_id=document_id,
-            facts=facts,
-        )
-        logger.info(
-            f"[Analysis] EntityConsistency complete for doc={document_id} in "
-            f"{(time.perf_counter()-t2)*1000:.1f}ms | "
-            f"inconsistencies={len(entity_inconsistencies)}"
-        )
-
-        # ── Phase 2c-i: Deterministic Contradiction Detection (no LLM) ───────────
-        from services.deterministic_contradiction import DeterministicContradictionDetector
-        det_detector = DeterministicContradictionDetector()
-        logger.info(f"[Analysis] Running DeterministicContradictionDetector for doc={document_id}")
-        t3a = time.perf_counter()
-        deterministic_conflicts = det_detector.detect(
-            chunks=chunks_text,
-            metadatas=chunks_meta,
-            document_id=document_id,
-            doc_name=doc_name,
-        )
-        logger.info(
-            f"[Analysis] DeterministicContradiction complete for doc={document_id} in "
-            f"{(time.perf_counter()-t3a)*1000:.1f}ms | "
-            f"deterministic_conflicts={len(deterministic_conflicts)}"
-        )
-
-        # ── Phase 2c-ii: Semantic Conflict Discovery (LLM-based) ─────────────
         from services.semantic_conflict import SemanticConflictDiscovery
-        # Attempt to obtain embedding provider for richer similarity analysis
+
+        consistency_service = EntityConsistencyService()
         embedding_provider = None
         try:
             from services.dependencies import get_embedding_provider
             embedding_provider = get_embedding_provider()
         except Exception:
-            pass  # Fall back to heuristic mode inside SemanticConflictDiscovery
-
+            pass
         conflict_service = SemanticConflictDiscovery(embedding_provider=embedding_provider)
-        logger.info(f"[Analysis] Running SemanticConflictDiscovery for doc={document_id}")
-        t3 = time.perf_counter()
-        llm_conflicts = await conflict_service.discover_conflicts(
-            facts=facts,
-            document_id=document_id,
+
+        t_stage2 = time.perf_counter()
+        stage2_results = await asyncio.gather(
+            consistency_service.find_inconsistencies(entities=entities, document_id=document_id, facts=facts),
+            conflict_service.discover_conflicts(facts=facts, document_id=document_id),
+            return_exceptions=True
         )
         logger.info(
-            f"[Analysis] SemanticConflict complete for doc={document_id} in "
-            f"{(time.perf_counter()-t3)*1000:.1f}ms | "
-            f"llm_conflicts={len(llm_conflicts)}"
+            f"[Analysis] Stage 2 consistency & conflict discovery complete for doc={document_id} in "
+            f"{(time.perf_counter()-t_stage2)*1000:.1f}ms"
         )
 
-        # Merge: deterministic first (authoritative), then LLM — dedup by summary/explanation
+        entity_inconsistencies = stage2_results[0] if not isinstance(stage2_results[0], BaseException) else []
+        llm_conflicts = stage2_results[1] if not isinstance(stage2_results[1], BaseException) else []
+
+        # Merge conflicts: deterministic first (authoritative), then LLM — dedup
         seen_summaries: set = set()
         semantic_conflicts: list = []
         for c in deterministic_conflicts + llm_conflicts:
@@ -186,58 +179,11 @@ class AnalysisService:
             if key and key not in seen_summaries:
                 seen_summaries.add(key)
                 semantic_conflicts.append(c)
-        logger.info(
-            f"[Analysis] Merged contradictions for doc={document_id}: "
-            f"total={len(semantic_conflicts)} (det={len(deterministic_conflicts)}, llm={len(llm_conflicts)})"
-        )
 
-        # ── Phase 2d: Ambiguity Detection ─────────────────────────────────────
-        from services.ambiguity import AmbiguityDetectionService
-        ambiguity_service = AmbiguityDetectionService()
-        logger.info(f"[Analysis] Running AmbiguityDetectionService for doc={document_id}")
-        t4 = time.perf_counter()
-        ambiguities = await ambiguity_service.detect_ambiguities(
-            chunks=chunks_text,
-            metadatas=chunks_meta,
-        )
-        logger.info(
-            f"[Analysis] AmbiguityDetection complete for doc={document_id} in "
-            f"{(time.perf_counter()-t4)*1000:.1f}ms | ambiguities={len(ambiguities)}"
-        )
-
-        # ── Phase 2e: Reference Integrity ─────────────────────────────────────
-        from services.reference import ReferenceIntegrityService
-        reference_service = ReferenceIntegrityService()
-        logger.info(f"[Analysis] Running ReferenceIntegrityService for doc={document_id}")
-        t5 = time.perf_counter()
-        references = await reference_service.verify_references(
-            chunks=chunks_text,
-            metadatas=chunks_meta,
-        )
-        logger.info(
-            f"[Analysis] ReferenceIntegrity complete for doc={document_id} in "
-            f"{(time.perf_counter()-t5)*1000:.1f}ms | references={len(references)}"
-        )
-
-        # ── Phase 2f: Requirement Traceability ────────────────────────────────
-        from services.requirements import RequirementTraceabilityService
-        requirements_service = RequirementTraceabilityService()
-        logger.info(f"[Analysis] Running RequirementTraceabilityService for doc={document_id}")
-        t6 = time.perf_counter()
-        requirements = await requirements_service.generate_matrix(
-            chunks=chunks_text,
-            metadatas=chunks_meta,
-        )
-        logger.info(
-            f"[Analysis] RequirementTraceability complete for doc={document_id} in "
-            f"{(time.perf_counter()-t6)*1000:.1f}ms | requirements={len(requirements)}"
-        )
-
-        # ── Phase 2g: Trust Score V2 ──────────────────────────────────────────
+        # ── Stage 3: Trust Score V2 ───────────────────────────────────────────
         from services.trust_score import TrustScoreV2Service
         trust_service = TrustScoreV2Service()
-        logger.info(f"[Analysis] Running TrustScoreV2Service for doc={document_id}")
-        t7 = time.perf_counter()
+        t_stage3 = time.perf_counter()
         trust_score = await trust_service.compute_trust_score(
             document_id=document_id,
             chunks=chunks_text,
@@ -250,49 +196,54 @@ class AnalysisService:
         )
         logger.info(
             f"[Analysis] TrustScoreV2 complete for doc={document_id} in "
-            f"{(time.perf_counter()-t7)*1000:.1f}ms | score={trust_score['score']}"
+            f"{(time.perf_counter()-t_stage3)*1000:.1f}ms | score={trust_score.get('score', 100)}"
         )
 
-        # ── Phase 2h: Executive Summary ───────────────────────────────────────
+        # ── Stage 4: Parallel Executive Summary & Review Copilot ───────────────
         from services.executive_summary import ExecutiveSummaryService
+        from services.copilot import ReviewCopilotService
         summary_service = ExecutiveSummaryService()
-        logger.info(f"[Analysis] Running ExecutiveSummaryService for doc={document_id}")
-        t8 = time.perf_counter()
-        executive_summary = await summary_service.generate_summary(
-            document_id=document_id,
-            doc_name=doc_name,
-            facts=facts,
-            semantic_conflicts=semantic_conflicts,
-            references=references,
-            requirements=requirements,
-            entity_conflicts=entity_inconsistencies,
-            ambiguities=ambiguities,
-            trust_score=trust_score
+        copilot_service = ReviewCopilotService()
+
+        t_stage4 = time.perf_counter()
+        stage4_results = await asyncio.gather(
+            summary_service.generate_summary(
+                document_id=document_id,
+                doc_name=doc_name,
+                facts=facts,
+                semantic_conflicts=semantic_conflicts,
+                references=references,
+                requirements=requirements,
+                entity_conflicts=entity_inconsistencies,
+                ambiguities=ambiguities,
+                trust_score=trust_score
+            ),
+            copilot_service.generate_review(
+                document_id=document_id,
+                doc_name=doc_name,
+                facts=facts,
+                semantic_conflicts=semantic_conflicts,
+                references=references,
+                requirements=requirements,
+                entity_conflicts=entity_inconsistencies,
+                ambiguities=ambiguities
+            ),
+            return_exceptions=True
         )
         logger.info(
-            f"[Analysis] ExecutiveSummary complete for doc={document_id} in "
-            f"{(time.perf_counter()-t8)*1000:.1f}ms"
+            f"[Analysis] Stage 4 summary & review complete for doc={document_id} in "
+            f"{(time.perf_counter()-t_stage4)*1000:.1f}ms"
         )
 
-        # ── Phase 2i: Review Copilot ──────────────────────────────────────────
-        from services.copilot import ReviewCopilotService
-        copilot_service = ReviewCopilotService()
-        logger.info(f"[Analysis] Running ReviewCopilotService for doc={document_id}")
-        t9 = time.perf_counter()
-        review = await copilot_service.generate_review(
-            document_id=document_id,
-            doc_name=doc_name,
-            facts=facts,
-            semantic_conflicts=semantic_conflicts,
-            references=references,
-            requirements=requirements,
-            entity_conflicts=entity_inconsistencies,
-            ambiguities=ambiguities
-        )
-        logger.info(
-            f"[Analysis] ReviewCopilot complete for doc={document_id} in "
-            f"{(time.perf_counter()-t9)*1000:.1f}ms"
-        )
+        executive_summary = stage4_results[0] if not isinstance(stage4_results[0], BaseException) else {
+            "executive_summary": "Summary completed.", "key_findings": [], "critical_risks": [],
+            "major_contradictions": [], "important_entities": [], "requirements_overview": "",
+            "trust_assessment": "", "recommended_actions": []
+        }
+        review = stage4_results[1] if not isinstance(stage4_results[1], BaseException) else {
+            "reviewer_checklist": [], "open_questions": [], "compliance_concerns": [],
+            "risk_items": [], "verification_tasks": []
+        }
 
         # ── Persist ───────────────────────────────────────────────────────────
         new_analysis = DocumentAnalysisModel(
@@ -310,7 +261,7 @@ class AnalysisService:
             trust_score_json=trust_score,
             executive_summary_json=executive_summary,
             review_json=review,
-            analyzed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            analyzed_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
 
         try:
@@ -347,7 +298,8 @@ class AnalysisService:
                     "requirements_json": analysis.requirements_json,
                     "trust_score_json": analysis.trust_score_json,
                     "executive_summary_json": analysis.executive_summary_json,
-                    "review_json": analysis.review_json
+                    "review_json": analysis.review_json,
+                    "analyzed_at": (analysis.analyzed_at.isoformat() if hasattr(analysis.analyzed_at, "isoformat") else str(analysis.analyzed_at)) if getattr(analysis, "analyzed_at", None) else datetime.now(timezone.utc).isoformat()
                 },
                 ttl_seconds=3600
             )

@@ -139,6 +139,12 @@ export class DocuMindSDK {
     });
   }
 
+  async reindexDocument(id: string): Promise<Document> {
+    return this.request<Document>(`/api/v1/documents/${id}/reindex`, {
+      method: "POST",
+    });
+  }
+
   // Analysis
   async getAnalysis(documentId: string): Promise<DocumentAnalysis> {
     return this.request<DocumentAnalysis>(`/api/v1/documents/${documentId}/analysis`);

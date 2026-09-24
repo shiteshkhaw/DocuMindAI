@@ -1,5 +1,6 @@
 import logging
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
@@ -192,6 +193,15 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=86400,  # preflight cache: 24 hours
 )
+
+# ── Global Error Handling ──────────────────────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"[GlobalException] Unhandled error on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"An error occurred: {str(exc)}"},
+    )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 app.include_router(health.router)
