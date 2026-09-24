@@ -17,27 +17,45 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://neondb_owner:password@c-2.ap-southeast-1.aws.neon.tech/neondb",
         description="Asyncpg database connection string"
     )
-    CORS_ORIGINS: Any = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]
+    CORS_ORIGINS: Any = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "https://docu-mind-ai-web.vercel.app",
+    ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:
+        origins: list[str] = []
         if isinstance(v, str):
             v = v.strip()
-            if not v:
-                return []
-            if (v.startswith("[") and v.endswith("]")) or (v.startswith("{") and v.endswith("}")):
-                try:
-                    parsed = json.loads(v)
-                    if isinstance(parsed, list):
-                        return parsed
-                except Exception:
-                    pass
-            # Robust split by comma for plain URLs or single/double quoted items
-            return [x.strip().strip("'").strip('"') for x in v.split(",") if x.strip()]
-        elif isinstance(v, list):
-            return [str(x) for x in v]
-        return v
+            if v:
+                if (v.startswith("[") and v.endswith("]")) or (v.startswith("{") and v.endswith("}")):
+                    try:
+                        parsed = json.loads(v)
+                        if isinstance(parsed, list):
+                            origins = [str(x).strip().rstrip("/") for x in parsed if str(x).strip()]
+                    except Exception:
+                        pass
+                if not origins:
+                    # Robust split by comma for plain URLs or single/double quoted items
+                    origins = [x.strip().strip("'").strip('"').rstrip("/") for x in v.split(",") if x.strip()]
+        elif isinstance(v, (list, tuple, set)):
+            origins = [str(x).strip().rstrip("/") for x in v if str(x).strip()]
+        else:
+            origins = [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:3001",
+                "https://docu-mind-ai-web.vercel.app",
+            ]
+
+        # Always guarantee canonical production frontend URL is present in CORS origins
+        canonical = "https://docu-mind-ai-web.vercel.app"
+        if canonical not in origins:
+            origins.append(canonical)
+        return origins
 
     MAX_FILE_SIZE_MB: int = 10
 

@@ -11,11 +11,16 @@ logger = logging.getLogger("documind.workers.broker")
 # Create and set the broker
 broker_url = settings.effective_broker_url
 
-if broker_url:
-    logger.info(f"[Workers] Initialising Redis broker with URL: {broker_url}")
-    broker = RedisBroker(url=broker_url)
+if broker_url and (broker_url.startswith("redis://") or broker_url.startswith("rediss://")):
+    try:
+        sanitized_url = broker_url.split("@")[-1] if "@" in broker_url else broker_url
+        logger.info(f"[Workers] Initialising Redis broker with host: {sanitized_url}")
+        broker = RedisBroker(url=broker_url)
+    except Exception as exc:
+        logger.warning(f"[Workers] Failed to initialize RedisBroker: {exc}. Falling back to StubBroker (in-memory).")
+        broker = StubBroker()
 else:
-    logger.warning("[Workers] No Redis URL configured. Falling back to StubBroker (in-memory).")
+    logger.warning("[Workers] No valid Redis TCP URL (redis:// or rediss://) configured. Falling back to StubBroker (in-memory).")
     broker = StubBroker()
 
 dramatiq.set_broker(broker)

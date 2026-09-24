@@ -87,20 +87,30 @@ class DocumentService:
         await self.repo.db.flush()
 
         # Dispatch background ingestion task to Dramatiq queue broker passing storage_key
-        from workers import ingest_document_worker
-        ingest_document_worker.send(
-            document_id=doc_id,
-            storage_key=storage_key,
-            filename=filename,
-            mime_type=content_type,
-            user_id=user_id,
-            workspace_id=workspace_id,
-        )
-
-        # In-Process Fallback: Only run in-process if broker is stub (no Redis broker)
-        # or RUN_WORKERS_IN_PROCESS is explicitly enabled, preventing duplicate racing executions.
+        dispatched_to_broker = False
         from workers.broker import is_stub_broker
-        if is_stub_broker() or settings.RUN_WORKERS_IN_PROCESS:
+        if not is_stub_broker():
+            try:
+                from workers import ingest_document_worker
+                ingest_document_worker.send(
+                    document_id=doc_id,
+                    storage_key=storage_key,
+                    filename=filename,
+                    mime_type=content_type,
+                    user_id=user_id,
+                    workspace_id=workspace_id,
+                )
+                dispatched_to_broker = True
+            except Exception as broker_err:
+                import logging
+                logging.getLogger("documind.services.document").warning(
+                    f"[DocumentService] Dramatiq broker dispatch failed: {broker_err}. "
+                    "Falling back to in-process execution."
+                )
+
+        # In-Process Fallback: Run in-process if broker is stub (no Redis broker),
+        # if broker dispatch failed, or RUN_WORKERS_IN_PROCESS is explicitly enabled.
+        if not dispatched_to_broker or is_stub_broker() or settings.RUN_WORKERS_IN_PROCESS:
             from workers.document_ingestion import _run_async_ingestion
             import asyncio
             asyncio.create_task(

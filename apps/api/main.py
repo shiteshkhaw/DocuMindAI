@@ -14,6 +14,10 @@ logger = logging.getLogger("documind.startup")
 # ── Security Headers Middleware ───────────────────────────────────────────────
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Allow CORS preflight requests to pass through untouched
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         response: Response = await call_next(request)
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -21,14 +25,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https:; "
-            "connect-src 'self' https:; "
-            "frame-ancestors 'none';"
-        )
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+
         # Remove server fingerprinting headers
         if "X-Powered-By" in response.headers:
             del response.headers["X-Powered-By"]
@@ -178,26 +176,21 @@ app = FastAPI(
 # ── Security Headers ───────────────────────────────────────────────────────────
 app.add_middleware(SecurityHeadersMiddleware)
 
-# ── CORS: explicit allow-lists only ───────────────────────────────────────────
-_ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+# ── CORS: explicit allow-lists and Vercel preview deployments ────────────────
+_ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
 _ALLOWED_HEADERS = [
-    "Authorization",
-    "Content-Type",
-    "Accept",
-    "Origin",
-    "X-Requested-With",
-    "X-Request-ID",
-    "Cache-Control",
+    "*",  # Allow all client and telemetry headers including sentry-trace, baggage, and Authorization
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"^https:\/\/([a-zA-Z0-9_-]+\.)?vercel\.app$",
     allow_credentials=True,
     allow_methods=_ALLOWED_METHODS,
     allow_headers=_ALLOWED_HEADERS,
-    expose_headers=["X-Request-ID"],
-    max_age=600,  # preflight cache: 10 minutes
+    expose_headers=["*"],
+    max_age=86400,  # preflight cache: 24 hours
 )
 
 # ── Routes ────────────────────────────────────────────────────────────────────

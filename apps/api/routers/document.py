@@ -77,15 +77,29 @@ async def upload_document(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
+    # Sanitize and normalize workspace_id from FormData
     if workspace_id:
-        from services.organization import OrganizationService
-        org_service = OrganizationService(db)
-        role = await org_service.get_user_role_for_workspace(workspace_id, current_user.id)
-        if role is None or role == "viewer":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Workspace access denied or insufficient permissions."
-            )
+        workspace_id = workspace_id.strip()
+        if workspace_id.lower() in ("", "undefined", "null", "none"):
+            workspace_id = None
+
+    if workspace_id:
+        from repositories.workspace import WorkspaceRepository
+        ws_repo = WorkspaceRepository(db)
+        ws = await ws_repo.get(workspace_id)
+        if not ws:
+            # Handle stale / non-existent workspace ID gracefully without triggering FK constraint 500
+            user_workspaces = await ws_repo.list_by_user(current_user.id)
+            workspace_id = user_workspaces[0].id if user_workspaces else None
+        else:
+            from services.organization import OrganizationService
+            org_service = OrganizationService(db)
+            role = await org_service.get_user_role_for_workspace(workspace_id, current_user.id)
+            if role is None or role == "viewer":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Workspace access denied or insufficient permissions."
+                )
             
     service = DocumentService(db)
     try:
@@ -106,7 +120,7 @@ async def upload_document(
     except Exception as e:
         import logging
         logging.getLogger("documind.routers.document").error(f"Upload failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Document upload failed. Please try again.")
+        raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
 
 @router.delete("/{id}")
 async def delete_document(
