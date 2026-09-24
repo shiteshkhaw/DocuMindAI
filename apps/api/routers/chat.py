@@ -16,7 +16,7 @@ async def list_sessions(
     current_user: UserModel = Depends(get_current_user)
 ):
     service = ChatService(db)
-    sessions = await service.list_sessions()
+    sessions = await service.list_sessions(user_id=current_user.id)
     return [
         ChatSessionResponse(
             id=s.id,
@@ -33,7 +33,7 @@ async def list_sessions(
             ],
             createdAt=s.created_at,
             updatedAt=s.updated_at
-        ) for s in sessions if s.user_id == current_user.id
+        ) for s in sessions
     ]
 
 @router.post("/sessions", response_model=ChatSessionResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limit("standard"))])
@@ -42,9 +42,22 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
+    from repositories.document import DocumentRepository
+    from services.organization import OrganizationService
+    doc_repo = DocumentRepository(db)
+    org_service = OrganizationService(db)
+
+    # Validate that current user has access to all requested documents
+    for doc_id in req.documentIds:
+        doc = await doc_repo.get(doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Document '{doc_id}' not found")
+        if doc.user_id != current_user.id:
+            role = await org_service.get_user_role_for_workspace(doc.workspace_id, current_user.id) if doc.workspace_id else None
+            if not role:
+                raise HTTPException(status_code=403, detail=f"Access to document '{doc_id}' denied")
+
     service = ChatService(db)
-    # Get workspace from the first document (or assume personal default if not passed)
-    # Ideally, req would include workspace_id. We'll add it if it's there.
     workspace_id = getattr(req, "workspace_id", None)
     s = await service.create_session(
         title=req.title, 

@@ -49,3 +49,7 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Local storage & build info
+local_storage/
+*.tsbuildinfo

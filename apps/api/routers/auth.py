@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from schemas.auth import UserCreate, UserLogin, TokenResponse, UserResponse, GoogleLogin
 from services.auth import AuthService
+from observability.rate_limiter import rate_limit
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -12,7 +13,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     service = AuthService(db)
     return await service.get_current_user(token)
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limit("auth"))])
 async def signup(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     user = await service.signup(user_in, generate_token=True)
@@ -28,12 +29,12 @@ async def signup(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         expires_in=getattr(user, "expires_in", None)
     )
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[Depends(rate_limit("auth"))])
 async def login(user_in: UserLogin, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     return await service.login(user_in)
 
-@router.post("/google", response_model=TokenResponse)
+@router.post("/google", response_model=TokenResponse, dependencies=[Depends(rate_limit("auth"))])
 async def google_login(google_in: GoogleLogin, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     return await service.google_login(google_in.token)

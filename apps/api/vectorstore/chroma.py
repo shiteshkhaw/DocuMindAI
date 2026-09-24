@@ -196,13 +196,9 @@ class ChromaVectorStore(BaseVectorStore):
             if ids is not None:
                 await asyncio.to_thread(collection.delete, ids=ids)
             elif filter_meta is not None:
-                where_clause: Dict[str, Any] = {}
-                for k, v in filter_meta.items():
-                    if isinstance(v, list):
-                        where_clause[k] = {"$in": v}
-                    else:
-                        where_clause[k] = v
-                await asyncio.to_thread(collection.delete, where=where_clause)
+                where_clause = self._build_where_clause(filter_meta)
+                if where_clause is not None:
+                    await asyncio.to_thread(collection.delete, where=where_clause)
         except Exception as e:
             logger.error(
                 f"[ChromaDB] Delete failed for collection '{collection_name}': {e}",
@@ -210,6 +206,29 @@ class ChromaVectorStore(BaseVectorStore):
             )
             # Re-raise so callers can decide how to handle
             raise
+
+    @staticmethod
+    def _build_where_clause(filter_meta: Dict[str, Any] | None) -> Where | None:
+        """
+        Builds a valid ChromaDB where clause.
+        Chroma requires multiple conditions to be wrapped in an explicit $and operator:
+        {"$and": [{k1: v1}, {k2: {"$in": [...]}}]}
+        """
+        if not filter_meta:
+            return None
+        conditions: List[Dict[str, Any]] = []
+        for k, v in filter_meta.items():
+            if v is None:
+                continue
+            if isinstance(v, list):
+                conditions.append({k: {"$in": v}})
+            else:
+                conditions.append({k: v})
+        if not conditions:
+            return None
+        if len(conditions) == 1:
+            return cast(Where, conditions[0])
+        return cast(Where, {"$and": conditions})
 
     async def query(
         self,
@@ -230,15 +249,7 @@ class ChromaVectorStore(BaseVectorStore):
                 metadata={"hnsw:space": "cosine"},
             )
 
-            where_clause: Where | None = None
-            if filter_meta:
-                built: Dict[str, Any] = {}
-                for k, v in filter_meta.items():
-                    if isinstance(v, list):
-                        built[k] = {"$in": v}
-                    else:
-                        built[k] = v
-                where_clause = cast(Where, built)
+            where_clause = self._build_where_clause(filter_meta)
 
             results = await asyncio.to_thread(
                 collection.query,

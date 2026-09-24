@@ -733,6 +733,13 @@ export default function DashboardShell() {
     initAuth();
   }, [initAuth]);
 
+  // ── Auth Guard: redirect unauthenticated users ──────────────────────
+  React.useEffect(() => {
+    if (!isAuthLoading && !user) {
+      router.replace("/auth/login");
+    }
+  }, [isAuthLoading, user, router]);
+
   React.useEffect(() => {
     if (user) {
       fetchWorkspaces();
@@ -1453,7 +1460,7 @@ export default function DashboardShell() {
   React.useEffect(() => {
     async function fetchDocs() {
       try {
-        const docs = await sdk.listDocuments();
+        const docs = await sdk.listDocuments(activeWorkspaceId || undefined);
         setDocuments(docs);
       } catch (err) {
         console.warn("Failed to connect to backend", err);
@@ -1461,7 +1468,7 @@ export default function DashboardShell() {
       }
     }
     fetchDocs();
-  }, [setDocuments]);
+  }, [activeWorkspaceId, setDocuments]);
 
   // Scroll chat window to bottom
   React.useEffect(() => {
@@ -1477,8 +1484,8 @@ export default function DashboardShell() {
     try {
       for (const file of files) {
         addLog("INFO", `Ingesting file: ${file.name}`);
-        const doc = await sdk.uploadDocument(file);
-        setDocuments([...documents, doc]);
+        const doc = await sdk.uploadDocument(file, activeWorkspaceId || undefined);
+        setDocuments((prev) => [...prev, doc]);
       }
     } catch (e: any) {
       setErrorMsg(e.message || "Failed to upload document");
@@ -2169,18 +2176,34 @@ export default function DashboardShell() {
                                   </div>
 
                                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Activity className="h-3 w-3 text-primary" />
-                                      Context relevance:{" "}
-                                      <span className="text-foreground font-bold">
-                                        {msg.citations && msg.citations.length > 0
-                                          ? `${(Math.max(...msg.citations.map((c) => c.score || 0)) * 100).toFixed(1)}%`
-                                          : "N/A"}
+                                    <div className="flex items-center gap-3">
+                                      <span className="flex items-center gap-1">
+                                        <Activity className="h-3 w-3 text-primary" />
+                                        Context relevance:{" "}
+                                        <span className="text-foreground font-bold">
+                                          {msg.citations && msg.citations.length > 0
+                                            ? `${(Math.max(...msg.citations.map((c) => c.score || 0)) * 100).toFixed(1)}%`
+                                            : "N/A"}
+                                        </span>
                                       </span>
-                                    </span>
-                                    <span className="font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full scale-90">
-                                      Shard hits: {msg.citations ? msg.citations.length : 0} blocks
-                                    </span>
+                                      <span className="font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full scale-90">
+                                        Shard hits: {msg.citations ? msg.citations.length : 0}{" "}
+                                        blocks
+                                      </span>
+                                    </div>
+                                    {retrievalDiagnosticsMap[msg.id] && (
+                                      <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setSelectedDiagMsgId(msg.id);
+                                          setActiveTab("retrieval");
+                                        }}
+                                        className="text-primary hover:text-primary/80 flex items-center gap-1 text-[10px] h-6 px-2 hover:bg-primary/10 rounded-lg transition-colors border border-primary/20"
+                                      >
+                                        <Network className="h-3 w-3" />
+                                        Inspect Retrieval
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               )}
@@ -2371,7 +2394,8 @@ export default function DashboardShell() {
                         <div className="grid grid-cols-3 gap-4">
                           {(["high", "medium", "low"] as const).map((sev) => {
                             const count = contradictionInsights.filter(
-                              (x) => x.severity === sev,
+                              (x) =>
+                                x.severity === sev || (sev === "high" && x.severity === "critical"),
                             ).length;
                             return (
                               <div
@@ -2445,7 +2469,8 @@ export default function DashboardShell() {
                                       <Badge
                                         className={cn(
                                           "text-[8px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border-0",
-                                          insight.severity === "high"
+                                          insight.severity === "high" ||
+                                            insight.severity === "critical"
                                             ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                                             : insight.severity === "medium"
                                               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
@@ -5044,20 +5069,81 @@ export default function DashboardShell() {
                         organizations.map((org) => (
                           <div
                             key={org.id}
-                            className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-card text-xs text-foreground"
+                            className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-card text-xs text-foreground animate-fadeIn"
                           >
-                            <div>
-                              <p className="font-semibold">{org.name}</p>
+                            <div className="overflow-hidden pr-2">
+                              <p className="font-semibold text-foreground truncate">{org.name}</p>
                               <p className="text-[9px] text-muted-foreground font-mono truncate max-w-[180px]">
                                 ID: {org.id}
                               </p>
                             </div>
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] bg-secondary text-muted-foreground border-border rounded-full scale-90 px-1.5 py-0.5"
-                            >
-                              Org
-                            </Badge>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Badge
+                                variant="outline"
+                                className="text-[8px] bg-secondary text-muted-foreground border-border rounded-full scale-90 px-1.5 py-0.5 uppercase tracking-wide font-bold"
+                              >
+                                {org.role || "member"}
+                              </Badge>
+                              {org.role === "admin" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={async () => {
+                                    if (
+                                      !confirm(
+                                        `Are you sure you want to delete organization "${org.name}"? This will dissolve the organization.`,
+                                      )
+                                    )
+                                      return;
+                                    try {
+                                      addLog("INFO", `Deleting organization: ${org.name}`);
+                                      await sdk.deleteOrganization(org.id);
+                                      const updatedOrgs = await sdk.listOrganizations();
+                                      setOrganizations(updatedOrgs);
+                                      fetchWorkspaces();
+                                      addLog("SUCCESS", `Organization deleted.`);
+                                    } catch (err: any) {
+                                      addLog(
+                                        "ERROR",
+                                        `Failed to delete organization: ${err.message}`,
+                                      );
+                                    }
+                                  }}
+                                  className="h-7 w-7 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-500/10"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (
+                                      !confirm(
+                                        `Are you sure you want to leave organization "${org.name}"?`,
+                                      )
+                                    )
+                                      return;
+                                    try {
+                                      addLog("INFO", `Leaving organization: ${org.name}`);
+                                      await sdk.removeOrganizationMember(org.id, user.id);
+                                      const updatedOrgs = await sdk.listOrganizations();
+                                      setOrganizations(updatedOrgs);
+                                      fetchWorkspaces();
+                                      addLog("SUCCESS", `Left organization.`);
+                                    } catch (err: any) {
+                                      addLog(
+                                        "ERROR",
+                                        `Failed to leave organization: ${err.message}`,
+                                      );
+                                    }
+                                  }}
+                                  className="text-[10px] text-muted-foreground hover:text-red-500 h-7 px-2 hover:bg-red-500/10 rounded-lg"
+                                >
+                                  Leave
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ))
                       )}
@@ -5115,14 +5201,14 @@ export default function DashboardShell() {
                       >
                         <div className="space-y-0.5">
                           <label className="text-[9px] font-bold text-muted-foreground uppercase block">
-                            User ID
+                            User Email or ID
                           </label>
                           <Input
-                            placeholder="user-id"
+                            placeholder="email@domain.com or user-id"
                             value={inviteUserId}
                             onChange={(e) => setInviteUserId(e.target.value)}
                             required
-                            className="text-xs py-1 px-2.5 bg-card border-border hover:border-primary/20 focus:border-primary w-28 h-8"
+                            className="text-xs py-1 px-2.5 bg-card border-border hover:border-primary/20 focus:border-primary w-48 h-8"
                           />
                         </div>
                         <div className="space-y-0.5">
@@ -5142,7 +5228,7 @@ export default function DashboardShell() {
                         <Button
                           type="submit"
                           size="sm"
-                          className="h-8 text-[11px] bg-primary text-primary-foreground font-semibold px-3.5 rounded-lg shadow-sm"
+                          className="h-8 text-[11px] bg-primary text-primary-foreground font-semibold px-3.5 rounded-lg shadow-sm animate-pulseFast"
                         >
                           Invite
                         </Button>
@@ -5165,64 +5251,101 @@ export default function DashboardShell() {
                           No members listed.
                         </p>
                       ) : (
-                        orgMembers.map((member) => (
-                          <div
-                            key={member.user_id}
-                            className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-card text-xs text-foreground"
-                          >
-                            <div>
-                              <p className="font-semibold">
-                                User: {member.user_name || member.user_email || member.user_id}
-                              </p>
-                              <p className="text-[9px] text-muted-foreground font-mono">
-                                ID: {member.user_id}
-                              </p>
+                        orgMembers.map((member) => {
+                          const currentOrg = organizations.find((o) => o.id === selectedOrgId);
+                          const isAdminOfSelectedOrg = currentOrg?.role === "admin";
+                          return (
+                            <div
+                              key={member.user_id}
+                              className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-card text-xs text-foreground animate-fadeIn"
+                            >
+                              <div className="overflow-hidden pr-2">
+                                <p className="font-semibold text-foreground truncate">
+                                  {member.name || member.email || `User: ${member.user_id}`}
+                                </p>
+                                <p className="text-[9px] text-muted-foreground font-mono truncate">
+                                  {member.email ? `${member.email} · ` : ""}ID: {member.user_id}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {member.user_id === user.id || !isAdminOfSelectedOrg ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] bg-secondary text-primary border-primary/20 rounded-full scale-90 px-1.5 py-0.5 uppercase tracking-wide font-bold"
+                                  >
+                                    {member.role}
+                                  </Badge>
+                                ) : (
+                                  <div className="flex items-center gap-1.5">
+                                    <select
+                                      value={member.role}
+                                      onChange={async (e) => {
+                                        const newRole = e.target.value;
+                                        try {
+                                          addLog(
+                                            "INFO",
+                                            `Changing member role for ${member.user_id} to ${newRole}`,
+                                          );
+                                          await sdk.updateOrganizationMemberRole(
+                                            selectedOrgId,
+                                            member.user_id,
+                                            newRole,
+                                          );
+                                          const updatedMembers =
+                                            await sdk.listOrganizationMembers(selectedOrgId);
+                                          setOrgMembers(updatedMembers);
+                                          addLog("SUCCESS", `Updated member role.`);
+                                        } catch (err: any) {
+                                          addLog(
+                                            "ERROR",
+                                            `Failed to update member role: ${err.message}`,
+                                          );
+                                          handleRateLimitError(err);
+                                        }
+                                      }}
+                                      className="text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-primary py-0.5 px-1.5"
+                                    >
+                                      <option value="viewer">Viewer</option>
+                                      <option value="member">Member</option>
+                                      <option value="admin">Admin</option>
+                                    </select>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={async () => {
+                                        if (
+                                          !confirm(
+                                            `Are you sure you want to remove user "${member.name || member.email || member.user_id}" from this organization?`,
+                                          )
+                                        )
+                                          return;
+                                        try {
+                                          addLog("INFO", `Removing member: ${member.user_id}`);
+                                          await sdk.removeOrganizationMember(
+                                            selectedOrgId,
+                                            member.user_id,
+                                          );
+                                          const updatedMembers =
+                                            await sdk.listOrganizationMembers(selectedOrgId);
+                                          setOrgMembers(updatedMembers);
+                                          addLog("SUCCESS", `Removed member successfully.`);
+                                        } catch (err: any) {
+                                          addLog(
+                                            "ERROR",
+                                            `Failed to remove member: ${err.message}`,
+                                          );
+                                        }
+                                      }}
+                                      className="h-7 w-7 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-500/10"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {member.user_id === user.id ? (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] bg-secondary text-primary border-primary/20 rounded-full scale-90 px-1.5 py-0.5 uppercase tracking-wide font-bold"
-                                >
-                                  {member.role}
-                                </Badge>
-                              ) : (
-                                <select
-                                  value={member.role}
-                                  onChange={async (e) => {
-                                    const newRole = e.target.value;
-                                    try {
-                                      addLog(
-                                        "INFO",
-                                        `Changing member role for ${member.user_id} to ${newRole}`,
-                                      );
-                                      await sdk.updateOrganizationMemberRole(
-                                        selectedOrgId,
-                                        member.user_id,
-                                        newRole,
-                                      );
-                                      const updatedMembers =
-                                        await sdk.listOrganizationMembers(selectedOrgId);
-                                      setOrgMembers(updatedMembers);
-                                      addLog("SUCCESS", `Updated member role.`);
-                                    } catch (err: any) {
-                                      addLog(
-                                        "ERROR",
-                                        `Failed to update member role: ${err.message}`,
-                                      );
-                                      handleRateLimitError(err);
-                                    }
-                                  }}
-                                  className="text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:border-primary py-0.5 px-1.5"
-                                >
-                                  <option value="viewer">Viewer</option>
-                                  <option value="member">Member</option>
-                                  <option value="admin">Admin</option>
-                                </select>
-                              )}
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>

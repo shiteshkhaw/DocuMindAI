@@ -33,22 +33,38 @@ class WorkspaceService:
         return workspace
 
     async def delete_workspace(self, user_id: str, id: str) -> bool:
-        query = select(WorkspaceModel).where(WorkspaceModel.id == id, WorkspaceModel.user_id == user_id)
+        query = select(WorkspaceModel).where(WorkspaceModel.id == id)
         result = await self.db.execute(query)
         workspace = result.scalar_one_or_none()
-        if workspace:
-            await self.db.delete(workspace)
-            await self.db.commit()
-            return True
-        return False
+        if not workspace:
+            return False
+
+        if workspace.user_id != user_id:
+            from services.organization import OrganizationService
+            org_service = OrganizationService(self.db)
+            role = await org_service.get_user_role_for_workspace(id, user_id)
+            if role != "admin":
+                return False
+
+        await self.db.delete(workspace)
+        await self.db.commit()
+        return True
 
     async def rename_workspace(self, user_id: str, id: str, name: str) -> WorkspaceModel | None:
-        query = select(WorkspaceModel).where(WorkspaceModel.id == id, WorkspaceModel.user_id == user_id)
+        query = select(WorkspaceModel).where(WorkspaceModel.id == id)
         result = await self.db.execute(query)
         workspace = result.scalar_one_or_none()
-        if workspace:
-            workspace.name = name
-            await self.db.commit()
-            await self.db.refresh(workspace)
-            return workspace
-        return None
+        if not workspace:
+            return None
+
+        if workspace.user_id != user_id:
+            from services.organization import OrganizationService
+            org_service = OrganizationService(self.db)
+            role = await org_service.get_user_role_for_workspace(id, user_id)
+            if role != "admin":
+                return None
+
+        workspace.name = name
+        await self.db.commit()
+        await self.db.refresh(workspace)
+        return workspace

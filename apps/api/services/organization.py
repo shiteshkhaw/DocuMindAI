@@ -32,10 +32,43 @@ class OrganizationService:
         await self.db.refresh(org)
         return org
 
-    async def get_user_organizations(self, user_id: str) -> list[OrganizationModel]:
-        query = select(OrganizationModel).join(OrganizationMemberModel).where(OrganizationMemberModel.user_id == user_id)
+    async def get_user_organizations(self, user_id: str) -> list[dict]:
+        query = select(OrganizationModel, OrganizationMemberModel.role).join(
+            OrganizationMemberModel, OrganizationModel.id == OrganizationMemberModel.organization_id
+        ).where(OrganizationMemberModel.user_id == user_id)
         res = await self.db.execute(query)
-        return list(res.scalars().all())
+        rows = res.all()
+        return [
+            {
+                "id": org.id,
+                "name": org.name,
+                "created_at": org.created_at,
+                "role": role
+            } for org, role in rows
+        ]
+
+    async def delete_organization(self, org_id: str) -> bool:
+        query = select(OrganizationModel).where(OrganizationModel.id == org_id)
+        res = await self.db.execute(query)
+        org = res.scalar_one_or_none()
+        if org:
+            await self.db.delete(org)
+            await self.db.commit()
+            return True
+        return False
+
+    async def remove_member(self, org_id: str, user_id: str) -> bool:
+        query = select(OrganizationMemberModel).where(
+            OrganizationMemberModel.organization_id == org_id,
+            OrganizationMemberModel.user_id == user_id
+        )
+        res = await self.db.execute(query)
+        member = res.scalar_one_or_none()
+        if member:
+            await self.db.delete(member)
+            await self.db.commit()
+            return True
+        return False
 
     async def add_member(self, org_id: str, user_id: str, role: str = "member") -> OrganizationMemberModel:
         # Check if already a member

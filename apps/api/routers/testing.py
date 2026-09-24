@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import io
 import uuid
+import logging
+
+logger = logging.getLogger("documind.testing")
 import time
 import asyncio
 import hashlib
@@ -219,7 +222,7 @@ async def _ingest_test_doc_sync(db: AsyncSession, user_id: str, workspace_id: st
         logger.info(f"[TestingSuite] running ingestion synchronously via stub broker for doc={doc_id}")
         ingest_document_worker(
             document_id=doc_id,
-            file_content=file_content,
+            storage_key=storage_key,
             filename=filename,
             mime_type="text/plain",
             user_id=user_id,
@@ -228,12 +231,12 @@ async def _ingest_test_doc_sync(db: AsyncSession, user_id: str, workspace_id: st
     else:
         logger.info(f"[TestingSuite] dispatching ingestion to Dramatiq queue for doc={doc_id}")
         ingest_document_worker.send(
-            doc_id,
-            file_content,
-            filename,
-            "text/plain",
-            user_id,
-            workspace_id
+            document_id=doc_id,
+            storage_key=storage_key,
+            filename=filename,
+            mime_type="text/plain",
+            user_id=user_id,
+            workspace_id=workspace_id
         )
         
         # Poll document status in the DB until processed

@@ -63,6 +63,9 @@ class AnalysisService:
             doc = await self.doc_repo.get(document_id)
             doc_name = doc.name if doc else "Unknown Document"
 
+            return await self._compute_and_persist_analysis(document_id, doc_name)
+
+    async def _compute_and_persist_analysis(self, document_id: str, doc_name: str) -> DocumentAnalysisModel:
         # Fetch document chunks from ChromaDB
         chunks_text, chunks_meta = await self._fetch_document_chunks(document_id)
 

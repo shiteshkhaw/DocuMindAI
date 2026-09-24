@@ -7,6 +7,14 @@ class ChatSessionRepository(BaseRepository[ChatSessionModel]):
     def __init__(self, db: AsyncSession):
         super().__init__(ChatSessionModel, db)
 
+    async def list_by_user(self, user_id: str) -> list[ChatSessionModel]:
+        result = await self.db.execute(
+            select(self.model)
+            .where(self.model.user_id == user_id)
+            .order_by(self.model.updated_at.desc())
+        )
+        return list(result.scalars().all())
+
 class MessageRepository(BaseRepository[MessageModel]):
     def __init__(self, db: AsyncSession):
         super().__init__(MessageModel, db)

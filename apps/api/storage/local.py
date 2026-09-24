@@ -22,8 +22,11 @@ class LocalStorageProvider(BaseStorageProvider):
 
     def _get_path(self, key: str) -> Path:
         # Prevent directory traversal attacks
-        safe_key = key.replace("..", "").lstrip("/")
-        return self.base_dir / safe_key
+        normalized = Path(key).as_posix().lstrip("/")
+        resolved = (self.base_dir / normalized).resolve()
+        if not resolved.is_relative_to(self.base_dir):
+            raise ValueError(f"Path traversal detected: {key}")
+        return resolved
 
     async def upload_file(
         self, key: str, data: bytes, content_type: str, metadata: dict | None = None

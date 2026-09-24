@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { FAQ_ITEMS } from "./landing-config";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function FAQ() {
@@ -15,48 +15,80 @@ export default function FAQ() {
   return (
     <section
       id="faq"
-      className="py-20 sm:py-28 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 border-t border-neutral-200/40 dark:border-neutral-800/40"
+      className="py-20 sm:py-28 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8"
       aria-labelledby="faq-heading"
     >
-      <div className="text-center mb-16">
-        <h2 className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-          Got Questions?
-        </h2>
-        <p
-          id="faq-heading"
-          className="mt-3 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white font-sans"
-        >
-          Frequently Answered Queries
-        </p>
-      </div>
+      {/* Separator */}
+      <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-20" />
 
-      <div className="space-y-4">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ type: "spring", stiffness: 200, damping: 24 }}
+        className="text-center mb-14"
+      >
+        <div className="flex justify-center mb-4">
+          <div className="h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50 flex items-center justify-center shadow-xs">
+            <MessageCircle className="h-5 w-5 text-indigo-600" />
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 px-3.5 text-[11px] font-bold text-indigo-700 shadow-sm mb-3">
+          Got Questions?
+        </span>
+        <h2
+          id="faq-heading"
+          className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight"
+        >
+          Frequently asked
+        </h2>
+      </motion.div>
+
+      {/* Accordion */}
+      <div className="space-y-3.5">
         {FAQ_ITEMS.map((item, index) => {
           const isOpen = openIndex === index;
 
           return (
-            <div
+            <motion.div
               key={index}
-              className="border border-neutral-200/60 bg-white dark:border-neutral-800/80 dark:bg-neutral-900/20 rounded-xl overflow-hidden transition-colors"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ type: "spring", stiffness: 200, damping: 24, delay: index * 0.06 }}
+              className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                isOpen
+                  ? "border-indigo-300 bg-indigo-50/50 shadow-md"
+                  : "border-slate-200/90 bg-white/95 shadow-sm hover:border-indigo-200 hover:shadow-md"
+              } backdrop-blur-md`}
             >
-              {/* Accordion Trigger Header */}
+              {/* Trigger */}
               <button
                 type="button"
                 onClick={() => toggleIndex(index)}
                 aria-expanded={isOpen}
                 aria-controls={`faq-answer-${index}`}
                 id={`faq-btn-${index}`}
-                className="w-full flex items-center justify-between p-5 text-left text-neutral-850 hover:text-neutral-950 dark:text-neutral-200 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 font-semibold text-xs sm:text-sm font-sans"
+                className="w-full flex items-center justify-between p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 group"
               >
-                <span>{item.question}</span>
-                <ChevronDown
-                  className={`h-4.5 w-4.5 text-neutral-400 dark:text-neutral-500 shrink-0 transition-transform duration-300 ${
-                    isOpen ? "rotate-180 text-indigo-500 dark:text-indigo-400" : ""
-                  }`}
-                />
+                <span
+                  className={`text-sm font-semibold transition-colors ${isOpen ? "text-indigo-950 font-bold" : "text-slate-800 group-hover:text-indigo-600"}`}
+                >
+                  {item.question}
+                </span>
+                <motion.div
+                  animate={{ rotate: isOpen ? 180 : 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="shrink-0 ml-4"
+                >
+                  <ChevronDown
+                    className={`h-4 w-4 transition-colors ${isOpen ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"}`}
+                  />
+                </motion.div>
               </button>
 
-              {/* Accordion Answer Content */}
+              {/* Answer */}
               <AnimatePresence initial={false}>
                 {isOpen && (
                   <motion.div
@@ -66,15 +98,15 @@ export default function FAQ() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    transition={{ duration: 0.22, ease: "easeInOut" }}
                   >
-                    <div className="px-5 pb-5 pt-0 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+                    <div className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-indigo-100 pt-4 font-normal">
                       {item.answer}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           );
         })}
       </div>

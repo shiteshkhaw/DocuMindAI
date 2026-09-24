@@ -7,17 +7,26 @@ from schemas.document import DocumentResponse
 from schemas.analysis import DocumentAnalysisResponse
 from routers.auth import get_current_user
 from models.auth import UserModel
+from observability.rate_limiter import rate_limit
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
-async def _get_owned_document(id: str, db: AsyncSession, current_user: UserModel):
-    """Fetch document and assert ownership — raises 404 if not found or not owned."""
+async def _get_owned_document(id: str, db: AsyncSession, current_user: UserModel, require_admin: bool = False):
+    """Fetch document and assert access — returns doc if user owns it or has workspace membership."""
     service = DocumentService(db)
     d = await service.get_document(id)
-    if not d or d.user_id != current_user.id:
+    if not d:
         raise HTTPException(status_code=404, detail="Document not found")
-    return d
+    if d.user_id == current_user.id:
+        return d
+    if d.workspace_id:
+        from services.organization import OrganizationService
+        org_service = OrganizationService(db)
+        role = await org_service.get_user_role_for_workspace(d.workspace_id, current_user.id)
+        if role is not None and (not require_admin or role == "admin"):
+            return d
+    raise HTTPException(status_code=404, detail="Document not found")
 
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
@@ -48,10 +57,7 @@ async def get_document(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    service = DocumentService(db)
-    d = await service.get_document(id)
-    if not d or d.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
+    d = await _get_owned_document(id, db, current_user)
     return DocumentResponse(
         id=d.id,
         name=d.name,
@@ -64,7 +70,7 @@ async def get_document(
         error=d.error
     )
 
-@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limit("upload"))])
 async def upload_document(
     file: UploadFile = File(...), 
     workspace_id: str | None = Form(None),
@@ -98,7 +104,9 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import logging
+        logging.getLogger("documind.routers.document").error(f"Upload failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Document upload failed. Please try again.")
 
 @router.delete("/{id}")
 async def delete_document(
@@ -107,9 +115,7 @@ async def delete_document(
     current_user: UserModel = Depends(get_current_user)
 ):
     service = DocumentService(db)
-    d = await service.get_document(id)
-    if not d or d.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
+    d = await _get_owned_document(id, db, current_user, require_admin=True)
         
     success = await service.delete_document(id)
     if not success:
@@ -135,10 +141,7 @@ async def get_document_analysis(
     db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    doc_service = DocumentService(db)
-    d = await doc_service.get_document(id)
-    if not d or d.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Document not found")
+    await _get_owned_document(id, db, current_user)
     
     analysis_service = AnalysisService(db)
     a = await analysis_service.get_or_create_analysis(id)

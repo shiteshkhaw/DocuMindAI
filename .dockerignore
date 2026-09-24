@@ -1,0 +1,44 @@
+# Git & version control
+.git
+.gitignore
+.github
+
+# Environment variables & secrets (NEVER copy into Docker images)
+.env
+.env.*
+!.env.example
+
+# Node / JS artifacts
+node_modules
+.next
+.turbo
+dist
+build
+coverage
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv
+.venv
+env
+.pytest_cache
+.mypy_cache
+.ruff_cache
+htmlcov
+.coverage
+
+# Local storage and test data
+apps/api/local_storage
+apps/api/chroma_db
+audit_evidence.json
+apps/api/audit_evidence.json
+apps/api/*.pdf
+
+# IDE & OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db

@@ -1,31 +1,32 @@
 // Design system tokens and static data for DocuMind AI landing page
+// Updated to dark-first glassmorphism palette
 
 export const DESIGN_TOKENS = {
   colors: {
-    background: "bg-[#fcfbfa] dark:bg-[#09090b]",
-    backgroundMuted: "bg-[#f5f4f0] dark:bg-[#121215]",
-    text: "text-neutral-900 dark:text-neutral-100",
-    textMuted: "text-neutral-500 dark:text-neutral-400",
-    primary: "bg-[#4f46e5] text-white hover:bg-[#4338ca] dark:bg-[#6366f1] dark:hover:bg-[#4f46e5]",
+    background: "bg-[#050508]",
+    backgroundMuted: "bg-white/3",
+    text: "text-neutral-100",
+    textMuted: "text-neutral-500",
+    primary: "text-white hover:opacity-90",
+    primaryBg: "bg-gradient-to-r from-violet-600 to-indigo-600",
     secondary:
-      "bg-white text-neutral-800 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 dark:bg-neutral-900 dark:text-neutral-200 dark:border-neutral-800 dark:hover:bg-neutral-800",
-    accent: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30",
-    accentBorder: "border-indigo-100 dark:border-indigo-900/50",
-    glowGradient: "from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/2 dark:to-purple-500/2",
+      "bg-white/5 text-neutral-300 border border-white/8 hover:bg-white/8 hover:text-white backdrop-blur-sm",
+    accent: "text-violet-400 bg-violet-500/10",
+    accentBorder: "border-violet-500/30",
+    glowGradient: "from-violet-500/10 to-indigo-500/10",
   },
   typography: {
-    heroTitle:
-      "text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1]",
-    sectionTitle: "text-3xl sm:text-4xl font-bold tracking-tight text-neutral-900 dark:text-white",
-    body: "text-base sm:text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed",
-    eyebrow: "text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400",
+    heroTitle: "text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.05]",
+    sectionTitle: "text-3xl sm:text-4xl font-extrabold tracking-tight text-white",
+    body: "text-base text-neutral-400 leading-relaxed",
+    eyebrow: "text-[11px] font-bold uppercase tracking-widest text-violet-400",
   },
   shadows: {
-    sm: "shadow-[0_1px_2px_rgba(0,0,0,0.02)]",
-    md: "shadow-[0_4px_12px_rgba(0,0,0,0.03)]",
-    lg: "shadow-[0_12px_30px_rgba(0,0,0,0.04)]",
-    premium: "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.02)]",
-    focus: "focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:outline-none",
+    sm: "shadow-[0_1px_2px_rgba(0,0,0,0.3)]",
+    md: "shadow-[0_4px_12px_rgba(0,0,0,0.4)]",
+    lg: "shadow-[0_12px_30px_rgba(0,0,0,0.5)]",
+    premium: "shadow-[0_1px_3px_rgba(0,0,0,0.3),0_20px_40px_rgba(124,58,237,0.08)]",
+    focus: "focus-visible:ring-2 focus-visible:ring-violet-500/40 focus-visible:outline-none",
   },
   radius: {
     sm: "rounded-md",
@@ -35,7 +36,7 @@ export const DESIGN_TOKENS = {
     full: "rounded-full",
   },
   animation: {
-    transition: "transition-all duration-300 ease-out-expo",
+    transition: "transition-all duration-300 ease-out",
     timing: {
       fast: 0.15,
       normal: 0.3,
@@ -44,8 +45,8 @@ export const DESIGN_TOKENS = {
     },
     spring: {
       type: "spring",
-      stiffness: 300,
-      damping: 28,
+      stiffness: 260,
+      damping: 26,
     },
   },
 };

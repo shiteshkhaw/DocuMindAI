@@ -16,7 +16,9 @@ class ChatService:
         self.session_repo = ChatSessionRepository(db)
         self.message_repo = MessageRepository(db)
 
-    async def list_sessions(self) -> list[ChatSessionModel]:
+    async def list_sessions(self, user_id: str | None = None) -> list[ChatSessionModel]:
+        if user_id:
+            return await self.session_repo.list_by_user(user_id)
         return await self.session_repo.list()
 
     async def get_session(self, id: str) -> ChatSessionModel | None:
@@ -80,6 +82,8 @@ class ChatService:
         # Retrieve session to find linked documents
         session = await self.session_repo.get(session_id)
         document_ids = session.document_ids if session else []
+        sess_user_id = session.user_id if session else None
+        sess_workspace_id = session.workspace_id if session else None
         model = model_name or "documind-v3"
 
         # Fetch messages history
@@ -102,7 +106,9 @@ class ChatService:
             query=content,
             document_ids=document_ids,
             model_name=model,
-            chat_history=history_msgs
+            chat_history=history_msgs,
+            user_id=sess_user_id,
+            workspace_id=sess_workspace_id,
         ):
             if chunk["type"] == "token":
                 full_content += chunk["content"]
@@ -147,6 +153,8 @@ class ChatService:
             return
 
         document_ids = session.document_ids
+        sess_user_id = session.user_id
+        sess_workspace_id = session.workspace_id
         model = model_name or "documind-v3"
 
         # Save user message (session verified, FK is safe)
@@ -179,7 +187,9 @@ class ChatService:
                 query=content,
                 document_ids=document_ids,
                 model_name=model,
-                chat_history=history_msgs
+                chat_history=history_msgs,
+                user_id=sess_user_id,
+                workspace_id=sess_workspace_id,
             ):
                 if chunk["type"] == "token":
                     token = chunk["content"]

@@ -3,11 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
-import { DESIGN_TOKENS } from "./landing-config";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function CTASection() {
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -16,57 +16,102 @@ export default function CTASection() {
 
   return (
     <section
-      className="py-20 sm:py-28 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 border-t border-neutral-200/40 dark:border-neutral-800/40"
-      aria-label="CTA"
+      className="py-20 sm:py-28 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+      aria-label="Call to action"
     >
-      <div className="relative overflow-hidden bg-indigo-50/50 dark:bg-indigo-950/20 px-6 py-20 text-center shadow-lg rounded-3xl sm:px-16 sm:py-28 border border-indigo-100/80 dark:border-indigo-900/30">
-        {/* Decorative background lights */}
-        <div className="absolute inset-0 -z-10 flex items-center justify-center">
-          <div className="h-[250px] w-[250px] sm:h-[400px] w-[400px] rounded-full bg-indigo-500/10 blur-[80px]" />
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ type: "spring", stiffness: 180, damping: 22 }}
+        className="relative overflow-hidden rounded-3xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-teal-50/80 backdrop-blur-md px-6 py-20 text-center sm:px-16 sm:py-28 shadow-xl shadow-indigo-500/5"
+      >
+        {/* Animated gradient mesh background */}
+        <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden rounded-3xl">
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.6, 0.4] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full bg-indigo-400/20 blur-[100px]"
+          />
+          <motion.div
+            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3], x: [0, 40, 0] }}
+            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-1/4 -left-1/4 w-1/2 h-full rounded-full bg-teal-400/20 blur-[120px]"
+          />
         </div>
 
-        <div className="mx-auto max-w-2xl space-y-6">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-550/10 dark:bg-indigo-500/10 py-1 px-3.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-            <Sparkles className="h-3 w-3" /> Get Instant Access
-          </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-4xl font-sans">
-            Ready to audit your documents?
+        {/* Content */}
+        <div className="relative mx-auto max-w-2xl space-y-6">
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white py-1.5 px-4 text-[11px] font-bold text-indigo-700 shadow-xs">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+              Get Instant Access
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
+            </span>
+          </div>
+
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+            Ready to audit your{" "}
+            <span className="bg-gradient-to-r from-indigo-600 to-teal-600 bg-clip-text text-transparent">
+              documents
+            </span>
+            ?
           </h2>
-          <p className="mx-auto max-w-xl text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
-            Join enterprise operations teams indexing data repositories and scanning clauses in
-            seconds. No credit card required.
+
+          <p className="mx-auto max-w-xl text-base text-slate-600 leading-relaxed font-normal">
+            Join enterprise operations teams indexing repositories and scanning clauses in seconds.
+            No credit card required. Deployed in under 2 minutes.
           </p>
 
+          {/* Features inline */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-slate-600">
+            {["Free to start", "Zero retention storage", "Sub-second retrieval"].map((f) => (
+              <span key={f} className="flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                {f}
+              </span>
+            ))}
+          </div>
+
+          {/* CTAs */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            {mounted &&
-              (user ? (
+            {!mounted || isLoading ? (
+              <div className="h-12 w-44 rounded-xl bg-slate-200 animate-pulse" />
+            ) : user ? (
+              <Link
+                href="/dashboard"
+                id="cta-workspace"
+                className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 overflow-hidden rounded-xl px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/25 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-600/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                style={{ background: "linear-gradient(135deg, #4f46e5, #0d9488)" }}
+              >
+                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 bg-gradient-to-r from-white/20 to-transparent" />
+                Go to Workspace Console
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+              </Link>
+            ) : (
+              <>
                 <Link
-                  href="/dashboard"
-                  className={`inline-flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 text-xs font-semibold rounded-xl shadow-md ${DESIGN_TOKENS.colors.primary} ${DESIGN_TOKENS.shadows.focus}`}
+                  href="/auth/signup"
+                  id="cta-signup"
+                  className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 overflow-hidden rounded-xl px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/25 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-600/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  style={{ background: "linear-gradient(135deg, #4f46e5, #0d9488)" }}
                 >
-                  Go to Workspace Console
-                  <ArrowRight className="h-4 w-4" />
+                  <span className="absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 bg-gradient-to-r from-white/20 to-transparent" />
+                  Create Free Account
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/signup"
-                    className={`inline-flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 text-xs font-semibold rounded-xl shadow-md ${DESIGN_TOKENS.colors.primary} ${DESIGN_TOKENS.shadows.focus}`}
-                  >
-                    Create Free Account
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <a
-                    href="#demo"
-                    className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 text-xs font-semibold rounded-xl border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:outline-none"
-                  >
-                    Explore Demo
-                  </a>
-                </>
-              ))}
+                <a
+                  href="#demo"
+                  id="cta-demo"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                >
+                  Explore Demo
+                </a>
+              </>
+            )}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

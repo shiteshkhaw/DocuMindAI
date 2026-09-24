@@ -17,15 +17,42 @@ class DocumentService:
         return await self.repo.get(id)
 
     async def upload_document(self, file: UploadFile, user_id: str, workspace_id: str | None = None) -> DocumentModel:
+        from pathlib import Path
+        from fastapi import HTTPException
+        from config import settings
+
+        raw_filename = file.filename or "unknown"
+        filename = Path(raw_filename).name  # strips any directory traversal / paths
+        if not filename or filename in (".", ".."):
+            filename = "document"
+
+        # Validate file format
+        allowed_extensions = {".pdf", ".docx", ".doc", ".txt", ".md"}
+        file_ext = Path(filename).suffix.lower()
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file format '{file_ext}'. Allowed formats: PDF, DOCX, DOC, TXT, MD."
+            )
+
         # Read contents for checksum and metadata validation
         contents = await file.read()
         file_size = len(contents)
-        
+
+        if file_size == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty (0 bytes).")
+
+        max_bytes = settings.MAX_FILE_SIZE_MB * 1024 * 1024
+        if file_size > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File exceeds maximum allowed size of {settings.MAX_FILE_SIZE_MB}MB."
+            )
+
         import hashlib
         checksum = hashlib.sha256(contents).hexdigest()
 
         doc_id = f"doc-{uuid.uuid4()}"
-        filename = file.filename or "unknown"
         content_type = file.content_type or "application/octet-stream"
         storage_key = f"documents/{doc_id}/{filename}"
 
@@ -70,14 +97,10 @@ class DocumentService:
             workspace_id=workspace_id,
         )
 
-        # Fallback/In-Process Execution: Run in-process asynchronously to ensure the document
-        # gets fully chunked, vector indexed, and analyzed even if the background Dramatiq
-        # worker is not running (common in local dev and single-instance deployments like Render/Railway).
-        from config import settings
+        # In-Process Fallback: Only run in-process if broker is stub (no Redis broker)
+        # or RUN_WORKERS_IN_PROCESS is explicitly enabled, preventing duplicate racing executions.
         from workers.broker import is_stub_broker
-        import os
-        run_in_process = os.getenv("RUN_WORKERS_IN_PROCESS", "true").lower() == "true"
-        if is_stub_broker() or settings.SENTRY_ENVIRONMENT == "development" or run_in_process:
+        if is_stub_broker() or settings.RUN_WORKERS_IN_PROCESS:
             from workers.document_ingestion import _run_async_ingestion
             import asyncio
             asyncio.create_task(

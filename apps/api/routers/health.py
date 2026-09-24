@@ -28,7 +28,7 @@ async def health_check():
             await conn.execute(sqlalchemy.text("SELECT 1"))
         result["postgres"] = "connected"
     except Exception as e:
-        result["postgres"] = f"disconnected: {str(e)}"
+        result["postgres"] = "disconnected"
         result["status"] = "degraded"
         logger.warning(f"[Health] Postgres check failed: {e}")
 
@@ -42,7 +42,7 @@ async def health_check():
         if redis_health.get("status") == "disconnected":
             result["status"] = "degraded"
     except Exception as e:
-        result["redis"] = f"error: {str(e)}"
+        result["redis"] = "disconnected"
         result["status"] = "degraded"
         logger.warning(f"[Health] Redis check failed: {e}")
 
@@ -56,7 +56,7 @@ async def health_check():
         if chroma_info.get("status") != "connected":
             result["status"] = "degraded"
     except Exception as e:
-        result["chroma"] = f"disconnected: {str(e)}"
+        result["chroma"] = "disconnected"
         result["chroma_backend"] = "unknown"
         result["chroma_collection_count"] = -1
         result["status"] = "degraded"

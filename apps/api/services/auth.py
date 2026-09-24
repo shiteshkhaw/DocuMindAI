@@ -1,5 +1,6 @@
 import uuid
 import logging
+import hashlib
 import httpx
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
@@ -16,9 +17,13 @@ logger = logging.getLogger("documind.services.auth")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = getattr(settings, "JWT_SECRET", "super-secret-key-for-dev")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24   # 24 hours
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
-# Security gate: warn loudly if the default insecure secret is being used in production
+JWT_ISSUER = "documind-api"
+JWT_AUDIENCE = "documind-web"
+
+# Security gate: warn loudly if the default insecure secret is being used
 _INSECURE_DEFAULTS = {"super-secret-key-for-dev", "", "secret", "changeme"}
 if SECRET_KEY.lower() in _INSECURE_DEFAULTS or len(SECRET_KEY) < 32:
     import warnings
@@ -27,6 +32,15 @@ if SECRET_KEY.lower() in _INSECURE_DEFAULTS or len(SECRET_KEY) < 32:
         "Set a strong random secret in the environment before deploying to production.",
         stacklevel=1
     )
+
+
+def _hash_token(token: str) -> str:
+    """SHA-256 hash a token for safe DB storage.
+    Raw tokens are never persisted — only their digest is stored,
+    so a DB breach cannot be used to forge authenticated sessions.
+    """
+    return hashlib.sha256(token.encode()).hexdigest()
+
 
 class AuthService:
     def __init__(self, db: AsyncSession):
@@ -46,7 +60,9 @@ class AuthService:
             expire = (datetime.now(timezone.utc) + timedelta(minutes=15)).replace(tzinfo=None)
         to_encode.update({
             "exp": expire,
-            "jti": str(uuid.uuid4())
+            "jti": str(uuid.uuid4()),   # JWT ID — unique per token
+            "iss": JWT_ISSUER,           # Issuer claim
+            "aud": JWT_AUDIENCE,         # Audience claim
         })
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
@@ -90,14 +106,15 @@ class AuthService:
             session = SessionModel(
                 id=f"sess-{uuid.uuid4()}",
                 user_id=user.id,
-                access_token=access_token,
-                refresh_token=refresh_token,
-                expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).replace(tzinfo=None),
+                # Store SHA-256 digest — never the raw token
+                access_token=_hash_token(access_token),
+                refresh_token=_hash_token(refresh_token),
+                expires_at=(datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).replace(tzinfo=None),
                 created_at=now
             )
             self.db.add(session)
             
-            # Dynamically attach token details
+            # Dynamically attach token details for response
             setattr(user, "access_token", access_token)
             setattr(user, "refresh_token", refresh_token)
             setattr(user, "token_type", "bearer")
@@ -124,9 +141,9 @@ class AuthService:
         session = SessionModel(
             id=f"sess-{uuid.uuid4()}",
             user_id=user.id,
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).replace(tzinfo=None)
+            access_token=_hash_token(access_token),
+            refresh_token=_hash_token(refresh_token),
+            expires_at=(datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).replace(tzinfo=None)
         )
         self.db.add(session)
         await self.db.commit()
@@ -220,9 +237,9 @@ class AuthService:
         session = SessionModel(
             id=f"sess-{uuid.uuid4()}",
             user_id=user.id,
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).replace(tzinfo=None),
+            access_token=_hash_token(access_token),
+            refresh_token=_hash_token(refresh_token),
+            expires_at=(datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).replace(tzinfo=None),
             created_at=now
         )
         self.db.add(session)
@@ -246,7 +263,8 @@ class AuthService:
         )
         
     async def logout(self, access_token: str):
-        query = select(SessionModel).where(SessionModel.access_token == access_token)
+        token_hash = _hash_token(access_token)
+        query = select(SessionModel).where(SessionModel.access_token == token_hash)
         result = await self.db.execute(query)
         session = result.scalar_one_or_none()
         if session:
@@ -254,25 +272,46 @@ class AuthService:
             await self.db.commit()
 
     async def get_current_user(self, token: str) -> UserModel:
+        credentials_error = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials are invalid or have expired.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(
+                token,
+                SECRET_KEY,
+                algorithms=[ALGORITHM],
+                audience=JWT_AUDIENCE,
+                issuer=JWT_ISSUER,
+            )
             user_id = payload.get("sub")
             if not user_id or not isinstance(user_id, str):
-                raise HTTPException(status_code=401, detail="Invalid token")
+                raise credentials_error
         except JWTError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise credentials_error
             
-        # Stateful session check: verify the token is registered and has not been revoked (logout)
-        session_query = select(SessionModel).where(SessionModel.access_token == token)
+        # Stateful session check: verify the hashed token exists and is not expired
+        token_hash = _hash_token(token)
+        session_query = select(SessionModel).where(SessionModel.access_token == token_hash)
         session_result = await self.db.execute(session_query)
         active_session = session_result.scalar_one_or_none()
+
         if not active_session:
-            raise HTTPException(status_code=401, detail="Session is invalid or has been logged out")
+            raise credentials_error
+
+        # Enforce hard session expiry from DB record
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        if active_session.expires_at and active_session.expires_at < now_utc:
+            # Expired session — clean it up automatically
+            await self.db.delete(active_session)
+            await self.db.commit()
+            raise credentials_error
             
         query = select(UserModel).where(UserModel.id == user_id)
         result = await self.db.execute(query)
         user = result.scalar_one_or_none()
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise credentials_error
             
         return user

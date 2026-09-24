@@ -28,6 +28,33 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         sdk.setToken("");
         set({ user: null, token: null });
+
+        if (typeof window !== "undefined") {
+          try {
+            const { useChatStore } = require("./useChatStore");
+            useChatStore.getState &&
+              useChatStore.setState({
+                documents: [],
+                selectedDocumentIds: [],
+                activeSession: null,
+                sessions: [],
+                isStreaming: false,
+              });
+          } catch (err) {
+            console.error("Error resetting chat store", err);
+          }
+          try {
+            const { useWorkspaceStore } = require("./useWorkspaceStore");
+            useWorkspaceStore.getState &&
+              useWorkspaceStore.setState({
+                workspaces: [],
+                activeWorkspaceId: null,
+                isLoading: false,
+              });
+          } catch (err) {
+            console.error("Error resetting workspace store", err);
+          }
+        }
       },
       initialize: async () => {
         const { token } = get();

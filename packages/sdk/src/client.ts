@@ -366,12 +366,27 @@ export class DocuMindSDK {
 
   async addOrganizationMember(
     orgId: string,
-    userId: string,
+    userIdOrEmail: string,
     role: string = "member",
   ): Promise<any> {
+    const payload = userIdOrEmail.includes("@")
+      ? { email: userIdOrEmail, role }
+      : { user_id: userIdOrEmail, role };
     return this.request<any>(`/api/v1/organizations/${orgId}/members`, {
       method: "POST",
-      body: JSON.stringify({ user_id: userId, role }),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteOrganization(orgId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/v1/organizations/${orgId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async removeOrganizationMember(orgId: string, userId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/v1/organizations/${orgId}/members/${userId}`, {
+      method: "DELETE",
     });
   }
 

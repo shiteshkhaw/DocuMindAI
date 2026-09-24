@@ -1,13 +1,40 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from config import settings
-from routers import document, chat, search, contradiction, health, auth, workspace, testing, organization
+from routers import document, chat, search, contradiction, health, auth, workspace, organization
 from db.session import engine
 from db.base import Base
 
 logger = logging.getLogger("documind.startup")
+
+
+# ── Security Headers Middleware ───────────────────────────────────────────────
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https:; "
+            "frame-ancestors 'none';"
+        )
+        # Remove server fingerprinting headers
+        if "X-Powered-By" in response.headers:
+            del response.headers["X-Powered-By"]
+        if "Server" in response.headers:
+            del response.headers["Server"]
+        return response
 
 
 @asynccontextmanager
@@ -134,23 +161,46 @@ async def lifespan(app: FastAPI):
     logger.info("[Shutdown] DocuMind AI shutting down.")
 
 
+# ── Determine if we are in development mode ───────────────────────────────────
+_IS_DEV = settings.SENTRY_ENVIRONMENT.lower() in ("development", "dev", "local")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
     description="Enterprise-grade Document Intelligence SaaS API",
     lifespan=lifespan,
+    # Disable interactive API docs in production to prevent reconnaissance
+    docs_url="/docs" if _IS_DEV else None,
+    redoc_url="/redoc" if _IS_DEV else None,
+    openapi_url="/openapi.json" if _IS_DEV else None,
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────
+# ── Security Headers ───────────────────────────────────────────────────────────
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ── CORS: explicit allow-lists only ───────────────────────────────────────────
+_ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+_ALLOWED_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "Origin",
+    "X-Requested-With",
+    "X-Request-ID",
+    "Cache-Control",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=_ALLOWED_METHODS,
+    allow_headers=_ALLOWED_HEADERS,
+    expose_headers=["X-Request-ID"],
+    max_age=600,  # preflight cache: 10 minutes
 )
 
-# ── Routes ────────────────────────────────────────────────────────────────
+# ── Routes ────────────────────────────────────────────────────────────────────
 app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(document.router, prefix=settings.API_V1_STR)
@@ -158,16 +208,22 @@ app.include_router(chat.router, prefix=settings.API_V1_STR)
 app.include_router(search.router, prefix=settings.API_V1_STR)
 app.include_router(contradiction.router, prefix=settings.API_V1_STR)
 app.include_router(workspace.router, prefix=settings.API_V1_STR)
-app.include_router(testing.router, prefix=settings.API_V1_STR)
 app.include_router(organization.router, prefix=settings.API_V1_STR)
 
+# ── Testing router: only mounted in non-production environments ───────────────
+if _IS_DEV:
+    from routers import testing
+    app.include_router(testing.router, prefix=settings.API_V1_STR)
+    logger.info("[Startup] Testing router mounted (development mode).")
+else:
+    logger.info("[Startup] Testing router DISABLED (production mode).")
 
-@app.get("/")
+
+@app.get("/", include_in_schema=False)
 async def root():
+    """Minimal root response — does not advertise internal endpoints."""
     return {
         "status": "healthy",
         "service": settings.PROJECT_NAME,
         "version": "1.0.0",
-        "docs_url": "/docs",
-        "health_url": "/health",
     }

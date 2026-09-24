@@ -23,6 +23,8 @@ class RedisSlidingWindowRateLimiter:
         """Returns (max_requests, window_seconds) based on limit type."""
         if limit_type == "heavy":
             return 10, 60.0  # 10 requests per minute
+        elif limit_type == "auth":
+            return 15, 60.0  # 15 requests per minute
         elif limit_type == "upload":
             return 50, 86400.0  # 50 requests per day (24h)
         elif limit_type == "chat":
@@ -137,7 +139,14 @@ def rate_limit(limit_type: str = "standard"):
         if auth_header and auth_header.startswith("Bearer "):
             key = auth_header
         else:
-            key = request.client.host if request.client else "unknown-ip"
+            forwarded = request.headers.get("x-forwarded-for")
+            real_ip = request.headers.get("x-real-ip")
+            if forwarded:
+                key = forwarded.split(",")[0].strip()
+            elif real_ip:
+                key = real_ip.strip()
+            else:
+                key = request.client.host if request.client else "unknown-ip"
             
         await rate_limiter.check_rate_limit(key, limit_type)
     return dependency

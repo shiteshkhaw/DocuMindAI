@@ -13,9 +13,9 @@ export const metadata: Metadata = {
   description:
     "AI-powered document intelligence SaaS platform with RAG, conversational AI, semantic search, and multi-document analysis.",
   icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
