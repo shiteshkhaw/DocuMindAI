@@ -34,9 +34,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Verify Tesseract is available on system PATH during build
 RUN which tesseract && tesseract --version
 
-# Create a non-privileged system user and group
+# Create a non-privileged system user and group, ensure /app and local_storage are owned by documind
 RUN groupadd --system --gid 10001 documind && \
-    useradd --system --uid 10001 --gid 10001 --create-home documind
+    useradd --system --uid 10001 --gid 10001 --create-home documind && \
+    mkdir -p /app/local_storage && \
+    chown -R documind:documind /app
 
 # Copy dependencies and application files with proper ownership
 COPY --from=builder --chown=documind:documind /root/.local /home/documind/.local

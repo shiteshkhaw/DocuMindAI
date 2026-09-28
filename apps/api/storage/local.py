@@ -17,8 +17,11 @@ class LocalStorageProvider(BaseStorageProvider):
 
     def __init__(self, base_dir: str = "local_storage") -> None:
         self.base_dir = Path(base_dir).resolve()
-        self.base_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"[LocalStorage] Root path set to: {self.base_dir}")
+        try:
+            self.base_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"[LocalStorage] Root path set to: {self.base_dir}")
+        except OSError as e:
+            logger.warning(f"[LocalStorage] Could not pre-create directory {self.base_dir}: {e}")
 
     def _get_path(self, key: str) -> Path:
         # If key is a file URI or path, extract the relative key or filename

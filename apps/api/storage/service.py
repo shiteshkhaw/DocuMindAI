@@ -138,7 +138,7 @@ def get_storage_provider() -> StorageService:
             f"URL: {settings.SUPABASE_URL} | Bucket: {settings.SUPABASE_STORAGE_BUCKET}"
         )
         provider = SupabaseStorageProvider()
-        fallback = LocalStorageProvider()
+        fallback = None
     else:
         logger.info(
             "[Storage] Missing Supabase credentials in environment configurations. "
