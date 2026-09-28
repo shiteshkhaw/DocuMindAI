@@ -112,10 +112,12 @@ export default function FeatureGrid() {
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
               className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-7 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 cursor-default min-h-[270px]"
             >
-              {/* Corner glow */}
+              {/* Corner glow (GPU radial gradient without software blur filter) */}
               <div
-                className="absolute -top-8 -right-8 w-36 h-36 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{ background: grad.glow }}
+                className="absolute -top-8 -right-8 w-36 h-36 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  background: `radial-gradient(circle, ${grad.glow.replace("0.06", "0.20")} 0%, transparent 70%)`,
+                }}
               />
 
               <div className="space-y-4">

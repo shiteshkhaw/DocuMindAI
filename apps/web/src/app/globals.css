@@ -88,10 +88,13 @@
     background-color: hsl(var(--background));
     font-family: var(--font-sans);
     overflow-x: hidden;
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
   }
+}
+
+/* ── Performance: content-visibility utility for 60fps scrolling ─────────── */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 650px;
 }
 
 /* ── Custom Scrollbar ────────────────────────────────────────────────────── */
@@ -134,11 +137,11 @@
   background-size: 20px 20px;
 }
 
-/* Glass card surface */
+/* Glass card surface (GPU-optimized blur) */
 .glass-card {
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .dark .glass-card {
@@ -243,6 +246,8 @@
 }
 .marquee-track {
   animation: marquee-left 30s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .marquee-track:hover {
   animation-play-state: paused;

@@ -59,12 +59,24 @@ export default function LandingPage() {
       <main id="main-content" className="relative focus:outline-none">
         <Hero />
         <SocialProof />
-        <FeatureGrid />
-        <InteractiveDemo />
-        <ArchitectureOverview />
-        <SecurityGrid />
-        <FAQ />
-        <CTASection />
+        <div className="content-auto">
+          <FeatureGrid />
+        </div>
+        <div className="content-auto">
+          <InteractiveDemo />
+        </div>
+        <div className="content-auto">
+          <ArchitectureOverview />
+        </div>
+        <div className="content-auto">
+          <SecurityGrid />
+        </div>
+        <div className="content-auto">
+          <FAQ />
+        </div>
+        <div className="content-auto">
+          <CTASection />
+        </div>
       </main>
 
       <Footer />

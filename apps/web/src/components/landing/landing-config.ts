@@ -10,7 +10,7 @@ export const DESIGN_TOKENS = {
     primary: "text-white hover:opacity-90",
     primaryBg: "bg-gradient-to-r from-violet-600 to-indigo-600",
     secondary:
-      "bg-white/5 text-neutral-300 border border-white/8 hover:bg-white/8 hover:text-white backdrop-blur-sm",
+      "bg-white/5 text-neutral-300 border border-white/8 hover:bg-white/8 hover:text-white",
     accent: "text-violet-400 bg-violet-500/10",
     accentBorder: "border-violet-500/30",
     glowGradient: "from-violet-500/10 to-indigo-500/10",

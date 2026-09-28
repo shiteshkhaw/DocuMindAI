@@ -100,6 +100,13 @@ class Settings(BaseSettings):
     DRAMATIQ_BROKER_URL: str | None = None
     RUN_WORKERS_IN_PROCESS: bool = True
 
+    # ── OCR Pipeline ──────────────────────────────────────────────────────
+    OCR_PROVIDER: str = "auto"  # Options: auto, tesseract, mock
+    OCR_LANGUAGE: str = "eng"
+    OCR_TIMEOUT_SECONDS: int = 30
+    OCR_MAX_PAGES: int = 100
+    TESSERACT_CMD: str | None = None
+
     @property
     def effective_broker_url(self) -> str | None:
         return self.DRAMATIQ_BROKER_URL or self.UPSTASH_REDIS_URL

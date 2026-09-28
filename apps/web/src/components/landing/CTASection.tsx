@@ -24,19 +24,23 @@ export default function CTASection() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ type: "spring", stiffness: 180, damping: 22 }}
-        className="relative overflow-hidden rounded-3xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-teal-50/80 backdrop-blur-md px-6 py-20 text-center sm:px-16 sm:py-28 shadow-xl shadow-indigo-500/5"
+        className="relative overflow-hidden rounded-3xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-teal-50/80 px-6 py-20 text-center sm:px-16 sm:py-28 shadow-xl shadow-indigo-500/5 transform-gpu"
       >
-        {/* Animated gradient mesh background */}
+        {/* GPU-composited gradient mesh background without software blur filters */}
         <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden rounded-3xl">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.6, 0.4] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full bg-indigo-400/20 blur-[100px]"
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full opacity-60"
+            style={{
+              background:
+                "radial-gradient(ellipse, rgba(129, 140, 248, 0.25) 0%, rgba(129, 140, 248, 0) 70%)",
+            }}
           />
-          <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3], x: [0, 40, 0] }}
-            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-1/4 -left-1/4 w-1/2 h-full rounded-full bg-teal-400/20 blur-[120px]"
+          <div
+            className="absolute -top-1/4 -left-1/4 w-1/2 h-full rounded-full opacity-50"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(45, 212, 191, 0.22) 0%, rgba(45, 212, 191, 0) 70%)",
+            }}
           />
         </div>
 
@@ -103,7 +107,7 @@ export default function CTASection() {
                 <a
                   href="#demo"
                   id="cta-demo"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
                 >
                   Explore Demo
                 </a>

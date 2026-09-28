@@ -57,11 +57,11 @@ export default function FAQ() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ type: "spring", stiffness: 200, damping: 24, delay: index * 0.06 }}
-              className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+              className={`rounded-2xl border transition-colors duration-200 overflow-hidden ${
                 isOpen
                   ? "border-indigo-300 bg-indigo-50/50 shadow-md"
-                  : "border-slate-200/90 bg-white/95 shadow-sm hover:border-indigo-200 hover:shadow-md"
-              } backdrop-blur-md`}
+                  : "border-slate-200/90 bg-white shadow-sm hover:border-indigo-200 hover:shadow-md"
+              }`}
             >
               {/* Trigger */}
               <button

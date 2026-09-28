@@ -25,9 +25,9 @@ export default function Navigation() {
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full transition-all duration-500 ${
+      className={`sticky top-0 z-40 w-full transition-colors duration-200 ${
         scrolled
-          ? "border-b border-slate-200/80 bg-white/80 shadow-md shadow-slate-900/5 backdrop-blur-xl"
+          ? "border-b border-slate-200/80 bg-white/95 shadow-xs"
           : "border-b border-transparent bg-transparent"
       }`}
     >
@@ -135,7 +135,7 @@ export default function Navigation() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="md:hidden border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur-xl overflow-hidden shadow-lg"
+            className="md:hidden border-b border-slate-200 bg-white px-4 py-4 overflow-hidden shadow-lg"
           >
             <nav className="flex flex-col gap-1" aria-label="Mobile Navigation">
               {NAVIGATION_ITEMS.map((item) => (

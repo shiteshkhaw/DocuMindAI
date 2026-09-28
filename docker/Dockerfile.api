@@ -20,14 +20,20 @@ FROM python:3.13-slim AS runner
 # Setup env variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/home/documind/.local/bin:$PATH"
+    PATH="/home/documind/.local/bin:$PATH" \
+    PORT=8000
 
 WORKDIR /app
 
-# Install postgres client runtime dependency
+# Install postgres client runtime dependency and Tesseract OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
+
+# Verify Tesseract is available on system PATH during build
+RUN which tesseract && tesseract --version
 
 # Create a non-privileged system user and group
 RUN groupadd --system --gid 10001 documind && \
@@ -41,4 +47,4 @@ COPY --chown=documind:documind apps/api/ ./
 USER documind
 
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

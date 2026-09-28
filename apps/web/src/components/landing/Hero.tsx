@@ -101,7 +101,7 @@ export default function Hero() {
         >
           {/* Release Badge */}
           <motion.div variants={itemVariants} className="mb-8">
-            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50/90 py-1.5 px-4.5 text-[11px] font-bold text-indigo-700 shadow-sm backdrop-blur-sm">
+            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1.5 px-4.5 text-[11px] font-bold text-indigo-700 shadow-2xs">
               <Sparkles className="h-3 w-3 text-indigo-600" />
               DocuMind AI v1.0 — Enterprise Intelligence
               <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
@@ -162,7 +162,7 @@ export default function Hero() {
                 <a
                   href="#demo"
                   id="hero-cta-demo"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-7 py-3.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-7 py-3.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
                 >
                   <Play className="h-4 w-4 fill-current opacity-70 text-indigo-600" />
                   Explore Tour

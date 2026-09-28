@@ -1920,7 +1920,7 @@ export default function DashboardShell() {
     <div className="flex h-screen bg-background text-foreground font-sans select-none overflow-hidden relative">
       {rateLimitWarning && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="bg-rose-500/10 backdrop-blur-md border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold px-4.5 py-3 rounded-xl shadow-lg flex items-center gap-2 pointer-events-auto">
+          <div className="bg-rose-50 dark:bg-rose-950/90 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-semibold px-4.5 py-3 rounded-xl shadow-lg flex items-center gap-2 pointer-events-auto">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{rateLimitWarning}</span>
             <button
@@ -1933,51 +1933,23 @@ export default function DashboardShell() {
         </div>
       )}
 
-      {/* Premium ambient glows */}
-      <motion.div
-        animate={{
-          x: [0, 30, -20, 0],
-          y: [0, -40, 20, 0],
-        }}
-        transition={{
-          duration: 25,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute top-0 right-1/4 w-[650px] h-[650px] bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 rounded-full blur-[140px] pointer-events-none z-0 dark:from-indigo-500/2 dark:to-purple-500/2"
-      />
-
-      {/* Faint Background Watermark Logo */}
-      <motion.div
-        animate={{
-          y: [0, -15, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden opacity-[0.025] dark:opacity-[0.008]"
-      >
-        <Image
-          src={logoImg}
-          alt=""
-          className="w-[450px] h-[450px] object-contain mix-blend-multiply"
+      {/* High-performance GPU-composited ambient glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden transform-gpu z-0">
+        <div
+          className="absolute top-0 right-1/4 w-[600px] h-[600px] rounded-full opacity-60 dark:opacity-20"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, rgba(99, 102, 241, 0) 70%)",
+          }}
         />
-      </motion.div>
-
-      <motion.div
-        animate={{
-          x: [0, -30, 20, 0],
-          y: [0, 40, -20, 0],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute bottom-0 left-1/4 w-[450px] h-[450px] bg-gradient-to-br from-primary/5 to-sky-500/5 rounded-full blur-[100px] pointer-events-none z-0 dark:from-primary/2 dark:to-sky-500/2"
-      />
+        <div
+          className="absolute bottom-0 left-1/4 w-[450px] h-[450px] rounded-full opacity-50 dark:opacity-20"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(13, 148, 136, 0.05) 0%, rgba(13, 148, 136, 0) 70%)",
+          }}
+        />
+      </div>
 
       {/* Main shell layer */}
       <div className="flex w-full h-full z-10 relative dot-grid">
@@ -2019,7 +1991,7 @@ export default function DashboardShell() {
         {/* 2. TOP NAVBAR & MAIN WORKSPACE */}
         <main className="flex-1 flex flex-col min-w-0 bg-background/95 relative overflow-hidden z-10">
           {/* Top Navbar */}
-          <header className="h-14 border-b border-border px-4 md:px-6 flex items-center justify-between flex-shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.005)] gap-3">
+          <header className="h-14 border-b border-border px-4 md:px-6 flex items-center justify-between flex-shrink-0 bg-background/95 sticky top-0 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.005)] gap-3">
             <div className="flex items-center gap-3">
               {/* Mobile Menu Icon */}
               <button
@@ -2408,7 +2380,7 @@ export default function DashboardShell() {
                   </div>
 
                   {/* Message Input prompt section */}
-                  <div className="p-6 border-t border-border bg-background/80 backdrop-blur-md flex-shrink-0">
+                  <div className="p-6 border-t border-border bg-background/95 flex-shrink-0">
                     <div className="max-w-3xl mx-auto space-y-4">
                       {/* Preset Pills */}
                       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
@@ -4973,7 +4945,7 @@ export default function DashboardShell() {
           {/* Collapsible Developer Console / Kernel Telemetry */}
           <div
             className={cn(
-              "border-t border-border bg-card/90 backdrop-blur-md transition-all duration-300 z-20 flex flex-col font-mono text-xs select-text",
+              "border-t border-border bg-card/98 transition-all duration-200 z-20 flex flex-col font-mono text-xs select-text",
               isConsoleOpen ? "h-64" : "h-9",
             )}
           >

@@ -109,7 +109,7 @@ export default function SocialProof() {
           {doubled.map((company, i) => (
             <div
               key={i}
-              className="flex-shrink-0 flex flex-col items-center justify-center gap-1 px-6 py-3.5 rounded-xl border border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm min-w-[160px]"
+              className="flex-shrink-0 flex flex-col items-center justify-center gap-1 px-6 py-3.5 rounded-xl border border-slate-200/80 bg-white shadow-2xs min-w-[160px]"
             >
               <span className="text-sm font-bold text-slate-800 whitespace-nowrap">
                 {company.name}

@@ -7,6 +7,7 @@ import Image from "next/image";
 import logoImg from "../../../public/logo.png";
 
 // Particle System Background
+// Lightweight GPU-friendly Particle System
 const ParticleSystem = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -27,53 +28,41 @@ const ParticleSystem = () => {
 
     const initParticles = () => {
       particles = [];
-      const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
+      const particleCount = 28;
       for (let i = 0; i < particleCount; i++) {
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 0.3,
-          vy: (Math.random() - 0.5) * 0.3,
-          size: Math.random() * 1.5 + 0.5,
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          size: Math.random() * 1.5 + 0.8,
         });
       }
     };
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "rgba(100, 100, 255, 0.4)";
-      ctx.strokeStyle = "rgba(100, 100, 255, 0.05)";
+      ctx.fillStyle = "rgba(99, 102, 241, 0.35)";
 
-      particles.forEach((p, i) => {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
 
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        if (p.x < 0) p.x = canvas.width;
+        else if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        else if (p.y > canvas.height) p.y = 0;
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
-
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const dx = p.x - p2.x;
-          const dy = p.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 120) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        }
-      });
+      }
 
       animationFrameId = requestAnimationFrame(draw);
     };
 
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", resize, { passive: true });
     resize();
     draw();
 
@@ -98,16 +87,16 @@ const TrustIndicators = () => (
     transition={{ delay: 0.6, duration: 0.8 }}
     className="mt-12 grid grid-cols-2 gap-4 max-w-sm"
   >
-    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 px-3 py-2 rounded-lg border border-border/50 backdrop-blur-md">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-2 rounded-lg border border-border/50 shadow-2xs">
       <Shield className="h-3.5 w-3.5 text-emerald-500" /> Private by Design
     </div>
-    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 px-3 py-2 rounded-lg border border-border/50 backdrop-blur-md">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-2 rounded-lg border border-border/50 shadow-2xs">
       <Brain className="h-3.5 w-3.5 text-indigo-500" /> AI Powered
     </div>
-    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 px-3 py-2 rounded-lg border border-border/50 backdrop-blur-md">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-2 rounded-lg border border-border/50 shadow-2xs">
       <Lock className="h-3.5 w-3.5 text-violet-500" /> Encrypted Storage
     </div>
-    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 px-3 py-2 rounded-lg border border-border/50 backdrop-blur-md">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-2 rounded-lg border border-border/50 shadow-2xs">
       <Layers className="h-3.5 w-3.5 text-blue-500" /> Workspace Isolation
     </div>
   </motion.div>
@@ -157,49 +146,23 @@ const MetricsCounter = () => {
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setMousePos({
-      x: (e.clientX / window.innerWidth - 0.5) * 20,
-      y: (e.clientY / window.innerHeight - 0.5) * 20,
-    });
-  };
-
   return (
-    <div
-      onMouseMove={handleMouseMove}
-      className="min-h-screen w-full flex bg-background relative overflow-hidden select-none"
-    >
-      {/* Animated Aurora Layer */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.3, 0.5, 0.3],
-            x: [0, 50, 0],
-            y: [0, -50, 0],
+    <div className="min-h-screen w-full flex bg-background relative overflow-hidden select-none">
+      {/* High-performance GPU-composited Aurora Layer */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none transform-gpu">
+        <div
+          className="absolute -top-[20%] -right-[10%] w-[65vw] h-[65vw] rounded-full opacity-60"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%)",
           }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -right-[10%] w-[70vw] h-[70vw] rounded-full bg-indigo-500/10 blur-[120px] dark:bg-indigo-500/5 mix-blend-screen"
         />
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.4, 0.2],
-            x: [0, -30, 0],
-            y: [0, 50, 0],
+        <div
+          className="absolute -bottom-[20%] -left-[10%] w-[55vw] h-[55vw] rounded-full opacity-50"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0) 70%)",
           }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full bg-violet-500/10 blur-[120px] dark:bg-violet-500/5 mix-blend-screen"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.15, 1],
-            opacity: [0.2, 0.3, 0.2],
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] rounded-full bg-blue-500/10 blur-[100px] dark:bg-blue-500/5 mix-blend-screen"
         />
       </div>
 
@@ -211,7 +174,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           >
             <motion.div
               animate={{ y: [0, -8, 0] }}
@@ -239,15 +202,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Right Auth Card Area */}
         <div className="flex-1 flex items-center justify-center p-8 lg:p-16 relative">
           <motion.div
-            style={{
-              rotateX: mousePos.y * -0.5,
-              rotateY: mousePos.x * 0.5,
-              transformPerspective: 1000,
-            }}
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 100 }}
-            className="w-full max-w-[420px] bg-card/60 backdrop-blur-2xl border border-border/50 rounded-3xl p-8 shadow-2xl relative overflow-hidden"
+            transition={{ type: "spring", damping: 25, stiffness: 120 }}
+            className="w-full max-w-[420px] bg-card/95 border border-border/60 rounded-3xl p-8 shadow-xl relative overflow-hidden transform-gpu"
           >
             {/* Inner dynamic glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
